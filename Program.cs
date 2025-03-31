@@ -15,8 +15,12 @@ builder.Services.AddSwaggerGen();
 
 builder.Services.AddDbContext<RozhnInstituteDbContext>(options => options.UseSqlServer(builder.Configuration.GetConnectionString("RozhnWebConnectionString")));
 builder.Services.AddScoped<ITermRepository, TermRepository>();
+builder.Services.AddScoped<ITermMonthsRepository, TermMonthsRepository>();
 
+builder.Services.AddScoped<ICoursesRepository, CoursesRepository>();
+builder.Services.AddScoped<IVillageRepository, VillageRepository>();
 builder.Services.AddAutoMapper(typeof(AutoMapperProfiles));
+builder.Services.AddScoped<ISessionRepository, SessionRepository>();
 var app = builder.Build();
 
 // Configure the HTTP request pipeline.

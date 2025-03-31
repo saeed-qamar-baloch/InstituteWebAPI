@@ -49,10 +49,25 @@ namespace InstituteWebAPI.Controllers
         {
             //convert Dto to domain Model
             var termDomainModel = mapper.Map<Term>(addTermDto);
-            var termsDomainModel = await termRepository.AddAsync(termDomainModel);
-            var termsDto= mapper.Map<Term>(addTermDto);
-            return Ok(termDomainModel);
+            termDomainModel = await termRepository.AddAsync(termDomainModel);
+
+            var termsDto= mapper.Map<AddTermDto>(termDomainModel);
+            return Ok(termsDto);
 
         }
+
+        [HttpPut]
+        [Route("{id:Guid}")]
+        public async Task<IActionResult> Update([FromRoute] Guid id, [FromBody] TermUpdateRequestDto termUpdateRequestDto)
+        {
+            var termDomainModel = mapper.Map<Term>(termUpdateRequestDto);
+            termDomainModel = await termRepository.UpdateAsync(id, termDomainModel);
+
+            if (termDomainModel == null)
+                return NotFound();
+
+            return Ok(mapper.Map<TermUpdateRequestDto>(termDomainModel));
+        }
+
     }
 }

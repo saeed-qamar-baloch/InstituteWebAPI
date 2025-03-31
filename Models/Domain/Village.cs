@@ -9,7 +9,6 @@ namespace InstituteWebApp.Models.Domain
         [Key]
         public Guid VillageID { get; set; }
         public string VillageName { get; set; }
-
         public List<Students> Students { get; set; }
 
     }
