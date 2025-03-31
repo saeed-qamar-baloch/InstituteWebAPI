@@ -1,4 +1,7 @@
 using InstituteWebAPI.Data;
+using InstituteWebAPI.Mappings;
+using InstituteWebAPI.Repositories.IRepository;
+using InstituteWebAPI.Repositories.Repository;
 using Microsoft.EntityFrameworkCore;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -11,6 +14,9 @@ builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
 builder.Services.AddDbContext<RozhnInstituteDbContext>(options => options.UseSqlServer(builder.Configuration.GetConnectionString("RozhnWebConnectionString")));
+builder.Services.AddScoped<ITermRepository, TermRepository>();
+
+builder.Services.AddAutoMapper(typeof(AutoMapperProfiles));
 var app = builder.Build();
 
 // Configure the HTTP request pipeline.
