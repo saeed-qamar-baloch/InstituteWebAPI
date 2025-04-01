@@ -72,8 +72,19 @@ namespace InstituteWebAPI.Controllers
             return Ok(mapper.Map<CourseUpdateRequestDto>(courseDomainModel));
 
         }
+        [HttpDelete]
+        [Route("{id:Guid}")]
 
+        public async Task<IActionResult> Delete([FromRoute] Guid id
+            )
+        {
 
+            var deleteCourse = await coursesRepository.DeleteAsync(id);
+            if (deleteCourse == null)
+                return NotFound();
+            return Ok(mapper.Map<CourseDto>(deleteCourse));
+
+        }
 
 
     }

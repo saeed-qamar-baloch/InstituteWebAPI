@@ -19,6 +19,7 @@ builder.Services.AddScoped<ITermMonthsRepository, TermMonthsRepository>();
 
 builder.Services.AddScoped<ICoursesRepository, CoursesRepository>();
 builder.Services.AddScoped<IVillageRepository, VillageRepository>();
+builder.Services.AddScoped<IClassesRepository, ClassesRepository>();
 builder.Services.AddAutoMapper(typeof(AutoMapperProfiles));
 builder.Services.AddScoped<ISessionRepository, SessionRepository>();
 var app = builder.Build();

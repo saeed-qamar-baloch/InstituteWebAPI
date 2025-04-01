@@ -24,6 +24,10 @@ namespace InstituteWebAPI.Mappings
             CreateMap<Sessions, SessionDto>().ReverseMap();
             CreateMap<AddSessionDto, Sessions>().ReverseMap();
             CreateMap<SessionUpdateRequestDto, Sessions>().ReverseMap();
+
+            CreateMap<AddClassesDto, Classes>().ReverseMap();
+            CreateMap<Classes, ClassesDto>().ReverseMap();
+            CreateMap<ClassUpdateRequestDto, Classes>().ReverseMap();
         }
     }
 }

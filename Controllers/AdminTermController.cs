@@ -47,7 +47,7 @@ namespace InstituteWebAPI.Controllers
         [HttpPost]
         public async Task<IActionResult> Create([FromBody] AddTermDto addTermDto)
         {
-            //convert Dto to domain Model
+            
             var termDomainModel = mapper.Map<Term>(addTermDto);
             termDomainModel = await termRepository.AddAsync(termDomainModel);
 
@@ -66,8 +66,23 @@ namespace InstituteWebAPI.Controllers
             if (termDomainModel == null)
                 return NotFound();
 
-            return Ok(mapper.Map<TermUpdateRequestDto>(termDomainModel));
+            return Ok(mapper.Map<TermDto>(termDomainModel));
         }
+
+
+        [HttpDelete]
+        [Route("{id:Guid}")]
+
+        public async Task<IActionResult> Delete([FromRoute] Guid id)
+        {
+            var deleteTerm = await termRepository.DeleteAsync(id);
+            if (deleteTerm == null)
+                return NotFound();
+
+            return Ok(mapper.Map<TermDto>(deleteTerm));
+        }
+
+
 
     }
 }
