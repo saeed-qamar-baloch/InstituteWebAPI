@@ -1,0 +1,62 @@
+﻿using AutoMapper;
+using InstituteWebApp.Models.Domain;
+using InstituteWebAPI.Models.DTO;
+using InstituteWebAPI.Repositories.IRepository;
+using Microsoft.AspNetCore.Mvc;
+
+namespace InstituteWebAPI.Controllers
+{
+    [Route("api/[controller]")]
+    [ApiController]
+    public class AdminTeacherCoursesController : ControllerBase
+    {
+        private readonly ITeacherCoursesRepository repo;
+        private readonly IMapper mapper;
+
+        public AdminTeacherCoursesController(ITeacherCoursesRepository repo, IMapper mapper)
+        {
+            this.repo = repo;
+            this.mapper = mapper;
+        }
+
+        [HttpGet]
+        public async Task<IActionResult> GetAll()
+        {
+            var data = await repo.GetAllAsync();
+            return Ok(mapper.Map<List<TeacherCourseDto>>(data));
+        }
+
+        [HttpGet("{id:Guid}")]
+        public async Task<IActionResult> GetById(Guid id)
+        {
+            var data = await repo.GetAsync(id);
+            if (data == null) return NotFound();
+            return Ok(mapper.Map<TeacherCourseDto>(data));
+        }
+
+        [HttpPost]
+        public async Task<IActionResult> Add(AddTeacherCourseDto dto)
+        {
+            var domain = mapper.Map<TeacherCourses>(dto);
+            domain = await repo.AddAsync(domain);
+            return Ok(mapper.Map<TeacherCourseDto>(domain));
+        }
+
+        [HttpPut("{id:Guid}")]
+        public async Task<IActionResult> Update(Guid id, UpdateTeacherCourseDto dto)
+        {
+            var domain = mapper.Map<TeacherCourses>(dto);
+            var updated = await repo.UpdateAsync(id, domain);
+            if (updated == null) return NotFound();
+            return Ok(mapper.Map<TeacherCourseDto>(updated));
+        }
+
+        [HttpDelete("{id:Guid}")]
+        public async Task<IActionResult> Delete(Guid id)
+        {
+            var deleted = await repo.DeleteAsync(id);
+            if (deleted == null) return NotFound();
+            return Ok(mapper.Map<TeacherCourseDto>(deleted));
+        }
+    }
+}

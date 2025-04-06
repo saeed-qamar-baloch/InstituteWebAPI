@@ -15,9 +15,6 @@ namespace InstituteWebApp.Models.Domain
         public Guid CurrentClassID { get; set; }
         [ForeignKey("CurrentClassID")]
         public CurrentClass CurrentClass { get; set; }
-        public Guid? TermID { get; set; }
-        [ForeignKey("TermID")]
-        public Term? Term { get; set; }
         public List<StudentMarks> StudentMarks { get; set; }
 
     }

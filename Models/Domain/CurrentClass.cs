@@ -14,10 +14,7 @@ namespace InstituteWebApp.Models.Domain
 
         public Guid? SectionID { get; set; }
         [ForeignKey("SectionID")]
-        public Sections Section { get; set; }
-        public Guid? TimeSlotID { get; set; }
-        [ForeignKey("TimeSlotID")]
-        public TimeSlot? TimeSlot { get; set; }
+        public Sections? Section { get; set; }
         public Guid? TeacherID { get; set; }
         [ForeignKey("TeacherID")]
         public Teachers? Teacher { get; set; }

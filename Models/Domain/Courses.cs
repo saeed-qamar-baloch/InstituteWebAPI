@@ -12,8 +12,8 @@ namespace InstituteWebApp.Models.Domain
         public bool CourseStatus { get; set; } 
 
         public List<Classes> Classes { get ; set; }
-        public List<Sections> Sections { get; set; } 
       
-        public List<StudentCourses> StudentCourses { get; set; }
+        public List<Admissions> Admissions { get; set; }
+        public List<Sections> Sections { get; set; }
     }
 }

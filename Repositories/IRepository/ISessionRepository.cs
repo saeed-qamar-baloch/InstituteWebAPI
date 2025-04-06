@@ -4,10 +4,11 @@ namespace InstituteWebAPI.Repositories.IRepository
 {
     public interface ISessionRepository
     {
-        Task<Sessions> AddAsync(Sessions session);
-        Task<Sessions?> GetAsync(Guid id);
-        Task<Sessions?> DeleteAsync(Guid id);
-        Task<Sessions?> UpdateAsync(Guid sessionID, Sessions session);
         Task<List<Sessions>> GetAllAsync();
+        Task<Sessions?> GetAsync(Guid id);
+        Task<Sessions?> GetByNameAsync(string name);
+        Task<Sessions> AddAsync(Sessions session);
+        Task<Sessions?> UpdateAsync(Guid id, Sessions session);
+        Task<Sessions?> DeleteAsync(Guid id);
     }
 }

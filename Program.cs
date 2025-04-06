@@ -20,8 +20,12 @@ builder.Services.AddScoped<ITermMonthsRepository, TermMonthsRepository>();
 builder.Services.AddScoped<ICoursesRepository, CoursesRepository>();
 builder.Services.AddScoped<IVillageRepository, VillageRepository>();
 builder.Services.AddScoped<IClassesRepository, ClassesRepository>();
-builder.Services.AddAutoMapper(typeof(AutoMapperProfiles));
+builder.Services.AddScoped<ISectionsRepository, SectionsRepository>();
 builder.Services.AddScoped<ISessionRepository, SessionRepository>();
+builder.Services.AddScoped<ITeacherRepository, TeacherRepository>();
+builder.Services.AddScoped<ITeacherCoursesRepository, TeacherCoursesRepository>();
+builder.Services.AddScoped<IStudentRepository, StudentRepository>();
+builder.Services.AddAutoMapper(typeof(AutoMapperProfiles));
 var app = builder.Build();
 
 // Configure the HTTP request pipeline.

@@ -12,7 +12,8 @@ namespace InstituteWebApp.Models.Domain
         public Teachers Teacher { get; set; }
         public Guid CourseID { get; set; }
         [ForeignKey("CourseID")]
-        public Courses Course { get; set; } 
+        public Courses Course { get; set; }
+        
         public bool CourseIsTaken { get; set; }
 
     }

@@ -4,6 +4,7 @@ using InstituteWebAPI.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -11,9 +12,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace InstituteWebAPI.Migrations
 {
     [DbContext(typeof(RozhnInstituteDbContext))]
-    partial class RozhnInstituteDbContextModelSnapshot : ModelSnapshot
+    [Migration("20250404104001_Session and Section removed Migration")]
+    partial class SessionandSectionremovedMigration
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -21,46 +24,6 @@ namespace InstituteWebAPI.Migrations
                 .HasAnnotation("Relational:MaxIdentifierLength", 128);
 
             SqlServerModelBuilderExtensions.UseIdentityColumns(modelBuilder);
-
-            modelBuilder.Entity("InstituteWebApp.Models.Domain.Admissions", b =>
-                {
-                    b.Property<Guid>("AdmissionID")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uniqueidentifier");
-
-                    b.Property<Guid>("CourseID")
-                        .HasColumnType("uniqueidentifier");
-
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("datetime2");
-
-                    b.Property<bool>("IsActive")
-                        .HasColumnType("bit");
-
-                    b.Property<DateTime>("LeavingDate")
-                        .HasColumnType("datetime2");
-
-                    b.Property<DateTime>("ModifiedAt")
-                        .HasColumnType("datetime2");
-
-                    b.Property<DateTime>("RegistrationDate")
-                        .HasColumnType("datetime2");
-
-                    b.Property<string>("Status")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<Guid>("StudentID")
-                        .HasColumnType("uniqueidentifier");
-
-                    b.HasKey("AdmissionID");
-
-                    b.HasIndex("CourseID");
-
-                    b.HasIndex("StudentID");
-
-                    b.ToTable("Admissions");
-                });
 
             modelBuilder.Entity("InstituteWebApp.Models.Domain.ClassStudents", b =>
                 {
@@ -156,11 +119,12 @@ namespace InstituteWebAPI.Migrations
                     b.Property<Guid?>("TermID")
                         .HasColumnType("uniqueidentifier");
 
+                    b.Property<Guid?>("TimeSlotID")
+                        .HasColumnType("uniqueidentifier");
+
                     b.HasKey("CurrentClassID");
 
                     b.HasIndex("ClassID");
-
-                    b.HasIndex("SectionID");
 
                     b.HasIndex("SessionID");
 
@@ -168,43 +132,9 @@ namespace InstituteWebAPI.Migrations
 
                     b.HasIndex("TermID");
 
+                    b.HasIndex("TimeSlotID");
+
                     b.ToTable("CurrentClasses");
-                });
-
-            modelBuilder.Entity("InstituteWebApp.Models.Domain.Sections", b =>
-                {
-                    b.Property<Guid>("SectionID")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uniqueidentifier");
-
-                    b.Property<Guid>("CourseID")
-                        .HasColumnType("uniqueidentifier");
-
-                    b.Property<DateTime>("EndTime")
-                        .HasColumnType("datetime2");
-
-                    b.Property<string>("SectionName")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<Guid?>("SessionID")
-                        .HasColumnType("uniqueidentifier");
-
-                    b.Property<DateTime>("StartTime")
-                        .HasColumnType("datetime2");
-
-                    b.Property<Guid?>("TermID")
-                        .HasColumnType("uniqueidentifier");
-
-                    b.HasKey("SectionID");
-
-                    b.HasIndex("CourseID");
-
-                    b.HasIndex("SessionID");
-
-                    b.HasIndex("TermID");
-
-                    b.ToTable("Sections");
                 });
 
             modelBuilder.Entity("InstituteWebApp.Models.Domain.Sessions", b =>
@@ -229,6 +159,46 @@ namespace InstituteWebAPI.Migrations
                     b.HasKey("SessionID");
 
                     b.ToTable("Sessions");
+                });
+
+            modelBuilder.Entity("InstituteWebApp.Models.Domain.StudentCourses", b =>
+                {
+                    b.Property<Guid>("StudentCourseID")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid>("CourseID")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("bit");
+
+                    b.Property<DateTime>("LeavingDate")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime>("ModifiedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime>("RegistrationDate")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<Guid>("StudentID")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.HasKey("StudentCourseID");
+
+                    b.HasIndex("CourseID");
+
+                    b.HasIndex("StudentID");
+
+                    b.ToTable("StudentCourses");
                 });
 
             modelBuilder.Entity("InstituteWebApp.Models.Domain.StudentMarks", b =>
@@ -324,10 +294,6 @@ namespace InstituteWebAPI.Migrations
                         .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("RegistrationNo")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("Remarks")
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
@@ -530,6 +496,28 @@ namespace InstituteWebAPI.Migrations
                     b.ToTable("Tests");
                 });
 
+            modelBuilder.Entity("InstituteWebApp.Models.Domain.TimeSlot", b =>
+                {
+                    b.Property<Guid>("TimeSlotID")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime>("EndTime")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime>("StartTime")
+                        .HasColumnType("datetime2");
+
+                    b.Property<Guid?>("TermID")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.HasKey("TimeSlotID");
+
+                    b.HasIndex("TermID");
+
+                    b.ToTable("TimeSlots");
+                });
+
             modelBuilder.Entity("InstituteWebApp.Models.Domain.Village", b =>
                 {
                     b.Property<Guid>("VillageID")
@@ -543,25 +531,6 @@ namespace InstituteWebAPI.Migrations
                     b.HasKey("VillageID");
 
                     b.ToTable("Village");
-                });
-
-            modelBuilder.Entity("InstituteWebApp.Models.Domain.Admissions", b =>
-                {
-                    b.HasOne("InstituteWebApp.Models.Domain.Courses", "Course")
-                        .WithMany("Admissions")
-                        .HasForeignKey("CourseID")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.HasOne("InstituteWebApp.Models.Domain.Students", "Student")
-                        .WithMany("Admissions")
-                        .HasForeignKey("StudentID")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("Course");
-
-                    b.Navigation("Student");
                 });
 
             modelBuilder.Entity("InstituteWebApp.Models.Domain.ClassStudents", b =>
@@ -602,10 +571,6 @@ namespace InstituteWebAPI.Migrations
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
-                    b.HasOne("InstituteWebApp.Models.Domain.Sections", "Section")
-                        .WithMany("CurrentClasses")
-                        .HasForeignKey("SectionID");
-
                     b.HasOne("InstituteWebApp.Models.Domain.Sessions", "Session")
                         .WithMany("CurrentClasses")
                         .HasForeignKey("SessionID");
@@ -618,38 +583,38 @@ namespace InstituteWebAPI.Migrations
                         .WithMany("CurrentClasses")
                         .HasForeignKey("TermID");
 
-                    b.Navigation("Class");
+                    b.HasOne("InstituteWebApp.Models.Domain.TimeSlot", "TimeSlot")
+                        .WithMany("CurrentClasses")
+                        .HasForeignKey("TimeSlotID");
 
-                    b.Navigation("Section");
+                    b.Navigation("Class");
 
                     b.Navigation("Session");
 
                     b.Navigation("Teacher");
 
                     b.Navigation("Term");
+
+                    b.Navigation("TimeSlot");
                 });
 
-            modelBuilder.Entity("InstituteWebApp.Models.Domain.Sections", b =>
+            modelBuilder.Entity("InstituteWebApp.Models.Domain.StudentCourses", b =>
                 {
                     b.HasOne("InstituteWebApp.Models.Domain.Courses", "Course")
-                        .WithMany("Sections")
+                        .WithMany("StudentCourses")
                         .HasForeignKey("CourseID")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
-                    b.HasOne("InstituteWebApp.Models.Domain.Sessions", "Sessions")
-                        .WithMany("Sections")
-                        .HasForeignKey("SessionID");
-
-                    b.HasOne("InstituteWebApp.Models.Domain.Term", "term")
-                        .WithMany("Sections")
-                        .HasForeignKey("TermID");
+                    b.HasOne("InstituteWebApp.Models.Domain.Students", "Student")
+                        .WithMany("StudentCourses")
+                        .HasForeignKey("StudentID")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
 
                     b.Navigation("Course");
 
-                    b.Navigation("Sessions");
-
-                    b.Navigation("term");
+                    b.Navigation("Student");
                 });
 
             modelBuilder.Entity("InstituteWebApp.Models.Domain.StudentMarks", b =>
@@ -732,6 +697,15 @@ namespace InstituteWebAPI.Migrations
                     b.Navigation("TermMonth");
                 });
 
+            modelBuilder.Entity("InstituteWebApp.Models.Domain.TimeSlot", b =>
+                {
+                    b.HasOne("InstituteWebApp.Models.Domain.Term", "term")
+                        .WithMany()
+                        .HasForeignKey("TermID");
+
+                    b.Navigation("term");
+                });
+
             modelBuilder.Entity("InstituteWebApp.Models.Domain.Classes", b =>
                 {
                     b.Navigation("CurrentClasses");
@@ -739,11 +713,9 @@ namespace InstituteWebAPI.Migrations
 
             modelBuilder.Entity("InstituteWebApp.Models.Domain.Courses", b =>
                 {
-                    b.Navigation("Admissions");
-
                     b.Navigation("Classes");
 
-                    b.Navigation("Sections");
+                    b.Navigation("StudentCourses");
                 });
 
             modelBuilder.Entity("InstituteWebApp.Models.Domain.CurrentClass", b =>
@@ -753,23 +725,16 @@ namespace InstituteWebAPI.Migrations
                     b.Navigation("Tests");
                 });
 
-            modelBuilder.Entity("InstituteWebApp.Models.Domain.Sections", b =>
-                {
-                    b.Navigation("CurrentClasses");
-                });
-
             modelBuilder.Entity("InstituteWebApp.Models.Domain.Sessions", b =>
                 {
                     b.Navigation("CurrentClasses");
-
-                    b.Navigation("Sections");
                 });
 
             modelBuilder.Entity("InstituteWebApp.Models.Domain.Students", b =>
                 {
-                    b.Navigation("Admissions");
-
                     b.Navigation("ClassStudents");
+
+                    b.Navigation("StudentCourses");
 
                     b.Navigation("StudentMarks");
                 });
@@ -785,8 +750,6 @@ namespace InstituteWebAPI.Migrations
                 {
                     b.Navigation("CurrentClasses");
 
-                    b.Navigation("Sections");
-
                     b.Navigation("StudentMarks");
 
                     b.Navigation("Tests");
@@ -800,6 +763,11 @@ namespace InstituteWebAPI.Migrations
             modelBuilder.Entity("InstituteWebApp.Models.Domain.Tests", b =>
                 {
                     b.Navigation("StudentMarks");
+                });
+
+            modelBuilder.Entity("InstituteWebApp.Models.Domain.TimeSlot", b =>
+                {
+                    b.Navigation("CurrentClasses");
                 });
 
             modelBuilder.Entity("InstituteWebApp.Models.Domain.Village", b =>

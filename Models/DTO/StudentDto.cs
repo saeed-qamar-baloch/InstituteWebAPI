@@ -1,26 +1,15 @@
-﻿using InstituteWebApp.Models.Domain;
-using System.ComponentModel.DataAnnotations;
-using System.ComponentModel.DataAnnotations.Schema;
-using System.Drawing;
-using System.Reflection.Metadata;
-namespace InstituteWebApp.Models.Domain
+﻿// StudentDto.cs
+namespace InstituteWebAPI.Models.DTO
 {
-    public class Students
+    public class StudentDto
     {
-        [Key]
         public Guid StudentID { get; set; }
-        public int Serial { get; set; }  // New column for serial number
-        public string RegDate { get; set; }  // New column for registration date
-
+        public int Serial { get; set; }
         public string RegistrationNo { get; set; }
-
         public string StudentName { get; set; }
         public string FatherName { get; set; }
         public string Gender { get; set; }
         public DateTime DateOfBirth { get; set; }
-        public Guid VillageID { get; set; }
-        [ForeignKey("VillageID")]
-        public Village Village { get; set; }
         public string Address { get; set; }
         public string City { get; set; }
         public string FatherContact { get; set; }
@@ -31,12 +20,9 @@ namespace InstituteWebApp.Models.Domain
         public string? FatherCnic { get; set; }
         public string? Picture { get; set; }
         public DateTime AdmissionDate { get; set; }
-        public DateTime CreatedAt { get; set; }
-        public DateTime ModifiedAt { get; set; }
         public bool IsEnrolled { get; set; }
         public string Remarks { get; set; }
-        public List<Admissions> Admissions { get; set; }
-        public List<ClassStudents> ClassStudents { get; set; }
-        public List<StudentMarks> StudentMarks { get; set; }
+
+        public VillageDto Village { get; set; }
     }
 }

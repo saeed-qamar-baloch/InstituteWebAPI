@@ -75,10 +75,8 @@ namespace InstituteWebAPI.Controllers
         [HttpDelete]
         [Route("{id:Guid}")]
 
-        public async Task<IActionResult> Delete([FromRoute] Guid id
-            )
+        public async Task<IActionResult> Delete([FromRoute] Guid id)
         {
-
             var deleteCourse = await coursesRepository.DeleteAsync(id);
             if (deleteCourse == null)
                 return NotFound();
