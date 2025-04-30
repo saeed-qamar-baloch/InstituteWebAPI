@@ -1,6 +1,20 @@
 ﻿using AutoMapper;
-using InstituteWebAPI.Models.DTO;
+using InstituteWebAPI.Models.DTO.Admissions;
+using InstituteWebAPI.Models.DTO.Classes;
+using InstituteWebAPI.Models.DTO.ClassStudents;
+using InstituteWebAPI.Models.DTO.Courses;
+using InstituteWebAPI.Models.DTO.CurrentClasses;
+using InstituteWebAPI.Models.DTO.Sections;
+using InstituteWebAPI.Models.DTO.Sessions;
+using InstituteWebAPI.Models.DTO.StudentMarks;
+using InstituteWebAPI.Models.DTO.Students;
+using InstituteWebAPI.Models.DTO.TeacherCourse;
+using InstituteWebAPI.Models.DTO.TermMonths;
+using InstituteWebAPI.Models.DTO.Terms;
+using InstituteWebAPI.Models.DTO.Tests;
+using InstituteWebAPI.Models.DTO.Villages;
 using InstituteWebApp.Models.Domain;
+using static System.Net.Mime.MediaTypeNames;
 
 namespace InstituteWebAPI.Mappings
 {
@@ -47,6 +61,27 @@ namespace InstituteWebAPI.Mappings
             CreateMap<Students, AddStudentDto>().ReverseMap();
             CreateMap<Students, StudentDto>().ReverseMap();
             CreateMap<Students, UpdateStudentDto>().ReverseMap();
+
+            CreateMap<AddAdmissionDto, Admissions>();
+            CreateMap<UpdateAdmissionDto, Admissions>();
+            CreateMap<Admissions, AdmissionDto>();
+
+            CreateMap<AddTestDto, Tests>();
+            CreateMap<UpdateTestDto, Tests>();
+            CreateMap<Tests, TestDto>();
+
+            CreateMap<AddCurrentClassDto, CurrentClass>();
+            CreateMap<UpdateCurrentClassDto, CurrentClass>();
+            CreateMap<CurrentClass, CurrentClassDto>();
+
+            CreateMap<AddStudentMarksDto, StudentMarks>();
+            CreateMap<UpdateStudentMarksDto, StudentMarks>();
+            CreateMap<StudentMarks, StudentMarksDto>();
+
+
+            CreateMap<AddClassStudentDto, ClassStudents>();
+            CreateMap<UpdateClassStudentDto, ClassStudents>();
+            CreateMap<ClassStudents, ClassStudentDto>();
         }
     }
 }

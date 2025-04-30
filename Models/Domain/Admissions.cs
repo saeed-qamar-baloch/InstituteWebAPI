@@ -14,7 +14,7 @@ namespace InstituteWebApp.Models.Domain
         public Guid CourseID { get; set; }
         [ForeignKey("CourseID")]
         public Courses Course { get; set; }
-        public DateTime LeavingDate { get; set; }
+        public DateTime? LeavingDate { get; set; }
         public DateTime CreatedAt { get; set; }
         public DateTime ModifiedAt { get; set; }
         public string Status { get; set; }

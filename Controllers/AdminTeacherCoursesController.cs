@@ -1,8 +1,8 @@
 ﻿using AutoMapper;
 using InstituteWebApp.Models.Domain;
-using InstituteWebAPI.Models.DTO;
 using InstituteWebAPI.Repositories.IRepository;
 using Microsoft.AspNetCore.Mvc;
+using InstituteWebAPI.Models.DTO.TeacherCourse;
 
 namespace InstituteWebAPI.Controllers
 {

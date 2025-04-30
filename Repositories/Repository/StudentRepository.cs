@@ -9,15 +9,53 @@ namespace InstituteWebAPI.Repositories.Repository
     public class StudentRepository : IStudentRepository
     {
         private readonly RozhnInstituteDbContext _DbContext;
+        private readonly IWebHostEnvironment webHostEnvironment;
+        private readonly IHttpContextAccessor httpContextAccessor;
 
-        public StudentRepository(RozhnInstituteDbContext _DBContext)
+        public StudentRepository(RozhnInstituteDbContext _DBContext, IWebHostEnvironment webHostEnvironment, IHttpContextAccessor httpContextAccessor)
         {
             _DbContext = _DBContext;
+            this.webHostEnvironment = webHostEnvironment;
+            this.httpContextAccessor = httpContextAccessor;
+
         }
 
-        public async Task<List<Students>> GetAllAsync()
+        public async Task<List<Students>> GetAllAsync(string? filterOn = null, string? filterQuery = null, string? sortBy = null, bool isAscending = true, int pageNumber = 1, int pageSize = 100)
         {
-            return await _DbContext.Students.Include(s => s.Village).ToListAsync();
+
+            var students = _DbContext.Students.Include(x => x.Village).AsQueryable();
+
+            //filter
+            if (string.IsNullOrWhiteSpace(filterOn) == false && string.IsNullOrWhiteSpace(filterQuery) == false)
+            {
+                if (filterOn.Equals("Village", StringComparison.OrdinalIgnoreCase))
+                {
+                    students = students.Where(x => x.Village.VillageName.Contains(filterQuery));
+                }
+            }
+
+            //sort
+            if (string.IsNullOrWhiteSpace(sortBy) == false)
+            {
+                if (sortBy.Equals("RegDate", StringComparison.OrdinalIgnoreCase))
+                {
+                    students = isAscending ? students.OrderBy(x => x.RegDate) : students.OrderByDescending(x => x.RegDate);
+                }
+
+
+                else if (sortBy.Equals("IsEnrolled", StringComparison.OrdinalIgnoreCase))
+                {
+                    students = isAscending ? students.OrderBy(x => x.IsEnrolled) : students.OrderByDescending(x => x.RegDate);
+                }
+            }
+
+            //Pagination 
+            var skipResult = (pageNumber - 1) * pageSize;
+
+
+            return await students.Skip(skipResult).Take(pageSize).ToListAsync();
+
+            // return await _DbContext.Students.Include(s => s.Village).ToListAsync();
         }
 
         public async Task<Students?> GetByIdAsync(Guid id)
@@ -39,6 +77,46 @@ namespace InstituteWebAPI.Repositories.Repository
 
         public async Task<Students> AddAsync(Students student)
         {
+
+            bool StudentExists = _DbContext.Students.Any(x => (x.StudentName == student.StudentName && x.FatherContact == student.FatherContact || student.StudentContact == x.StudentContact)
+                || (x.StudentName == student.StudentName && x.FatherCnic == student.FatherCnic)
+
+                );
+
+            if (StudentExists)
+            {
+                return null;
+            }
+           
+
+            // Get the current maximum serial number
+            int maxSerial = await _DbContext.Students.MaxAsync(s => (int?)s.Serial) ?? 0;
+            int newSerial = maxSerial + 1;
+
+            student.Serial = newSerial;
+
+            // Use the provided RegDate to generate the RegistrationNo
+            string monthYear = student.RegDate.ToString("MMMyy"); // e.g., Jan25
+            string formattedSerial = newSerial.ToString("D3");     // e.g., 001
+            student.RegistrationNo = $"RZKG-{monthYear}-{formattedSerial}";
+
+            var fileExtension = Path.GetExtension(student.file.FileName);
+
+            var localFilePath = Path.Combine(webHostEnvironment.ContentRootPath, "Images", "Students", $"{student.RegistrationNo}{fileExtension}");
+
+
+           
+
+            using var stream = new FileStream(localFilePath, FileMode.Create);
+
+            await student.file.CopyToAsync(stream);
+
+            var urlFilePath = $"{httpContextAccessor.HttpContext.Request.Scheme}://{httpContextAccessor.HttpContext.Request.Host}{httpContextAccessor.HttpContext.Request.PathBase}/Images/Students/{student.RegistrationNo}{fileExtension}";
+
+
+            student.CreatedAt = DateTime.Now;
+            student.ModifiedAt = DateTime.Now;
+            student.Picture = urlFilePath;
             await _DbContext.Students.AddAsync(student);
             await _DbContext.SaveChangesAsync();
             return student;
@@ -49,6 +127,17 @@ namespace InstituteWebAPI.Repositories.Repository
             var existing = await _DbContext.Students.FindAsync(id);
             if (existing == null) return null;
 
+
+            var fileExtension = Path.GetExtension (student.file.FileName);
+
+            var localFilePath = Path.Combine(webHostEnvironment.ContentRootPath, "Images", "Students", $"{existing.RegistrationNo}{fileExtension}");
+
+            using var stream = new FileStream(localFilePath, FileMode.Create);
+            await student.file.CopyToAsync (stream);
+
+            var UrlFilePath = $"{httpContextAccessor.HttpContext.Request.Scheme}://{httpContextAccessor.HttpContext.Request.Host}{httpContextAccessor.HttpContext.Request.PathBase}/Images/Students/{existing.RegistrationNo}{fileExtension}";
+
+
             existing.StudentName = student.StudentName;
             existing.FatherName = student.FatherName;
             existing.Address = student.Address;
@@ -58,7 +147,7 @@ namespace InstituteWebAPI.Repositories.Repository
             existing.Qualification = student.Qualification;
             existing.Institute = student.Institute;
             existing.FatherCnic = student.FatherCnic;
-            existing.Picture = student.Picture;
+            existing.Picture = UrlFilePath;
             existing.Remarks = student.Remarks;
             existing.ModifiedAt = DateTime.Now;
 

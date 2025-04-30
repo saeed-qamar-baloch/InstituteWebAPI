@@ -37,7 +37,7 @@ namespace InstituteWebAPI.Migrations
                     b.Property<bool>("IsActive")
                         .HasColumnType("bit");
 
-                    b.Property<DateTime>("LeavingDate")
+                    b.Property<DateTime?>("LeavingDate")
                         .HasColumnType("datetime2");
 
                     b.Property<DateTime>("ModifiedAt")
@@ -270,9 +270,6 @@ namespace InstituteWebAPI.Migrations
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
-                    b.Property<DateTime>("AdmissionDate")
-                        .HasColumnType("datetime2");
-
                     b.Property<string>("City")
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
@@ -319,9 +316,8 @@ namespace InstituteWebAPI.Migrations
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
-                    b.Property<string>("RegDate")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
+                    b.Property<DateTime>("RegDate")
+                        .HasColumnType("datetime2");
 
                     b.Property<string>("RegistrationNo")
                         .IsRequired()

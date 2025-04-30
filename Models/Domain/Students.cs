@@ -10,7 +10,7 @@ namespace InstituteWebApp.Models.Domain
         [Key]
         public Guid StudentID { get; set; }
         public int Serial { get; set; }  // New column for serial number
-        public string RegDate { get; set; }  // New column for registration date
+        public DateTime RegDate { get; set; }  // New column for registration date
 
         public string RegistrationNo { get; set; }
 
@@ -30,11 +30,15 @@ namespace InstituteWebApp.Models.Domain
         public string Institute { get; set; }
         public string? FatherCnic { get; set; }
         public string? Picture { get; set; }
-        public DateTime AdmissionDate { get; set; }
         public DateTime CreatedAt { get; set; }
         public DateTime ModifiedAt { get; set; }
         public bool IsEnrolled { get; set; }
         public string Remarks { get; set; }
+        [NotMapped]
+        public IFormFile file { get; set; }
+
+
+
         public List<Admissions> Admissions { get; set; }
         public List<ClassStudents> ClassStudents { get; set; }
         public List<StudentMarks> StudentMarks { get; set; }

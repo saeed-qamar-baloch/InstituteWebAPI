@@ -1,7 +1,8 @@
 ﻿using AutoMapper;
-using InstituteWebAPI.Models.DTO;
+using InstituteWebAPI.Models.DTO.Terms;
 using InstituteWebAPI.Repositories.IRepository;
 using InstituteWebApp.Models.Domain;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 
@@ -9,6 +10,7 @@ namespace InstituteWebAPI.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
+    [Authorize]
     public class AdminTermController : ControllerBase
     {
         private readonly ITermRepository termRepository;
@@ -19,6 +21,7 @@ namespace InstituteWebAPI.Controllers
             this.termRepository = termRepository;
             this.mapper = mapper;
         }
+       
         [HttpGet]
         public async Task<IActionResult> GetAll()
         {

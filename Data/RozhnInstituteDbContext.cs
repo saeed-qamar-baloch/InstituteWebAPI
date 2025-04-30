@@ -8,7 +8,7 @@ namespace InstituteWebAPI.Data
 {
     public class RozhnInstituteDbContext:DbContext
     {
-        public RozhnInstituteDbContext(DbContextOptions dbContextOptions):base(dbContextOptions)
+        public RozhnInstituteDbContext(DbContextOptions<RozhnInstituteDbContext> dbContextOptions):base(dbContextOptions)
         {
             
         }

@@ -1,6 +1,6 @@
 ﻿// StudentsController.cs
 using AutoMapper;
-using InstituteWebAPI.Models.DTO;
+using InstituteWebAPI.Models.DTO.Students;
 using InstituteWebAPI.Repositories.IRepository;
 using InstituteWebAPI.Repositories.Repository;
 using InstituteWebApp.Models.Domain;
@@ -21,10 +21,11 @@ namespace InstituteWebAPI.Controllers
             this.mapper = mapper;
         }
 
+        //api/adminstudents?filterOn=
         [HttpGet]
-        public async Task<IActionResult> GetAll()
+        public async Task<IActionResult> GetAll([FromQuery] string? filterOn, [FromQuery] string? filterQuery, [FromQuery] string? sortBy, [FromQuery] bool isAscending, [FromQuery] int pageNumber=1, [FromQuery] int pageSize=100 )
         {
-            var students = await studentRepository.GetAllAsync();
+            var students = await studentRepository.GetAllAsync(filterOn, filterQuery, sortBy, isAscending, pageNumber, pageSize);
             return Ok(mapper.Map<List<StudentDto>>(students));
         }
 
@@ -53,11 +54,16 @@ namespace InstituteWebAPI.Controllers
         }
 
         [HttpPost]
-        public async Task<IActionResult> Add(AddStudentDto dto)
+        public async Task<IActionResult> Add([FromForm]AddStudentDto dto)
         {
             var domain = mapper.Map<Students>(dto);
             domain.CreatedAt = DateTime.Now;
             domain.ModifiedAt = DateTime.Now;
+
+            domain.file = dto.file;
+          
+            
+
 
             var created = await studentRepository.AddAsync(domain);
             return Ok(mapper.Map<StudentDto>(created));
@@ -68,6 +74,9 @@ namespace InstituteWebAPI.Controllers
         {
             var updated = await studentRepository.UpdateAsync(id, mapper.Map<Students>(dto));
             if (updated == null) return NotFound();
+
+            updated.file = dto.file;
+
             return Ok(mapper.Map<StudentDto>(updated));
         }
 

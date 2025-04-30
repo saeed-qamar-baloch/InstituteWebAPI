@@ -1,5 +1,5 @@
 ﻿using AutoMapper;
-using InstituteWebAPI.Models.DTO;
+using InstituteWebAPI.Models.DTO.TermMonths;
 using InstituteWebAPI.Repositories.IRepository;
 using InstituteWebApp.Models.Domain;
 using Microsoft.AspNetCore.Http;
