@@ -1,4 +1,6 @@
-﻿using System.ComponentModel.DataAnnotations;
+﻿using Microsoft.AspNetCore.Identity;
+using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations.Schema;
 
 namespace InstituteWebApp.Models.Domain
 {
@@ -6,6 +8,7 @@ namespace InstituteWebApp.Models.Domain
     {
         [Key]
         public Guid TeacherID { get; set; }
+        public int Serial { get; set; }
         public string RegistrationNo { get; set; }
         public string TeacherName { get; set; }
         public string FatherName { get; set; }
@@ -23,6 +26,9 @@ namespace InstituteWebApp.Models.Domain
         public string Picture { get; set; }
         public string Experience { get; set; }
         public DateTime RegistrationDate { get; set; }
+
+        [NotMapped]
+        public IFormFile file { get; set; }
         public List<TeacherCourses> TeacherCourses { get; set; } 
 
         public bool IsTeaching { get; set; }

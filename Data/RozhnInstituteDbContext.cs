@@ -29,5 +29,7 @@ namespace InstituteWebAPI.Data
         public DbSet<Sections> Sections { get; set; }
         public DbSet<Village> Village { get; set; }
 
+       
+
     }
 }

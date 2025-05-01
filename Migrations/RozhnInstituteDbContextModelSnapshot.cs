@@ -442,6 +442,9 @@ namespace InstituteWebAPI.Migrations
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
+                    b.Property<int>("Serial")
+                        .HasColumnType("int");
+
                     b.Property<string>("TeacherName")
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");

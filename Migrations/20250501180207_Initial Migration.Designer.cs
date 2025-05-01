@@ -12,8 +12,8 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace InstituteWebAPI.Migrations
 {
     [DbContext(typeof(RozhnInstituteDbContext))]
-    [Migration("20250415161053_RegDate to date migration")]
-    partial class RegDatetodatemigration
+    [Migration("20250501180207_Initial Migration")]
+    partial class InitialMigration
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -273,9 +273,6 @@ namespace InstituteWebAPI.Migrations
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
-                    b.Property<DateTime>("AdmissionDate")
-                        .HasColumnType("datetime2");
-
                     b.Property<string>("City")
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
@@ -447,6 +444,9 @@ namespace InstituteWebAPI.Migrations
                     b.Property<string>("RegistrationNo")
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
+
+                    b.Property<int>("Serial")
+                        .HasColumnType("int");
 
                     b.Property<string>("TeacherName")
                         .IsRequired()

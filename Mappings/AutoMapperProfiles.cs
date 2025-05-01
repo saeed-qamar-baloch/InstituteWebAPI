@@ -25,7 +25,6 @@ namespace InstituteWebAPI.Mappings
             CreateMap<Term, TermDto>().ReverseMap();
             CreateMap<AddTermDto, Term>().ReverseMap();
             CreateMap<CourseDto, Courses>().ReverseMap();
-            CreateMap<AddTermDto, Courses>().ReverseMap();
             CreateMap<CourseUpdateRequestDto, Courses>().ReverseMap();
             CreateMap<TermUpdateRequestDto, Term>().ReverseMap();
             CreateMap<TermMonths, TermMonthsDto>().ReverseMap();

@@ -1,6 +1,7 @@
 ﻿using InstituteWebAPI.Models.DTO.Login;
 using InstituteWebAPI.Models.DTO.Register;
 using InstituteWebAPI.Repositories.IRepository;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
@@ -20,43 +21,46 @@ namespace InstituteWebAPI.Controllers
             this.tokenRepository = tokenRepository;
         }
 
+        //post /api/Auth/Register
 
         [HttpPost]
         [Route("Register")]
-
-
-        //post /api/Auth/Register
-
+        [Authorize(Roles ="Teacher")]
         public async Task<ActionResult> Register([FromBody] RegisterDto registerDto)
         {
+            if (registerDto == null)
+            {
+                return BadRequest("Invalid data.");
+            }
+
+            if (string.IsNullOrEmpty(registerDto.Username) || string.IsNullOrEmpty(registerDto.Password))
+            {
+                return BadRequest("Username and Password are required.");
+            }
 
             var identityUser = new IdentityUser
-            {UserName = registerDto.Username,
-            Email = registerDto.Username
-
+            {
+                UserName = registerDto.Username,
+                Email = registerDto.Username 
             };
 
-          var identityResult =   await userManager.CreateAsync(identityUser, registerDto.Password);
+            var identityResult = await userManager.CreateAsync(identityUser, registerDto.Password);
 
             if (identityResult.Succeeded)
             {
-                //add roles to this user
                 if (registerDto.Roles != null && registerDto.Roles.Any())
                 {
-
-                    await userManager.AddToRolesAsync(identityUser, registerDto.Roles);
-
-                    if (identityResult.Succeeded)
+                    var addRolesResult = await userManager.AddToRolesAsync(identityUser, registerDto.Roles);
+                    if (!addRolesResult.Succeeded)
                     {
-                        return Ok("User Registered Successfully. Please login");
+                        return BadRequest("Failed to assign roles.");
                     }
-
-
                 }
+
+                return Ok("User Registered Successfully. Please login");
             }
 
-            return BadRequest("Something went wrong.");
-
+            return BadRequest($"Something went wrong: {string.Join(", ", identityResult.Errors.Select(e => e.Description))}");
         }
 
         [HttpPost]

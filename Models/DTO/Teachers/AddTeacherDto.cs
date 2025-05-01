@@ -34,4 +34,5 @@ public class AddTeacherDto
     public string? Experience { get; set; }
     public DateTime RegistrationDate { get; set; }
     public bool IsTeaching { get; set; }
+    public IFormFile file { get; set; }
 }

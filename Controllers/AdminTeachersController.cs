@@ -50,10 +50,12 @@ public class AdminTeachersController : ControllerBase
     }
 
     [HttpPost]
-    public async Task<IActionResult> Create([FromBody] AddTeacherDto dto)
+    public async Task<IActionResult> Create([FromForm] AddTeacherDto dto)
     {
         var teacher = mapper.Map<Teachers>(dto);
         teacher = await repo.AddAsync(teacher);
+
+        teacher.file = dto.file;
 
         return Ok(mapper.Map<TeacherDto>(teacher));
     }

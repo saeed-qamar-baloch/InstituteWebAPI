@@ -26,6 +26,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <Folder Include="Images\Teachers\" />
     <Folder Include="Images\Students\" />
   </ItemGroup>
 

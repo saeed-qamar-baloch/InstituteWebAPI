@@ -127,15 +127,21 @@ namespace InstituteWebAPI.Repositories.Repository
             var existing = await _DbContext.Students.FindAsync(id);
             if (existing == null) return null;
 
+            if (student.file != null)
+            {
+                var fileExtension = Path.GetExtension(student.file.FileName);
 
-            var fileExtension = Path.GetExtension (student.file.FileName);
+                var localFilePath = Path.Combine(webHostEnvironment.ContentRootPath, "Images", "Students", $"{existing.RegistrationNo}{fileExtension}");
 
-            var localFilePath = Path.Combine(webHostEnvironment.ContentRootPath, "Images", "Students", $"{existing.RegistrationNo}{fileExtension}");
+                using var stream = new FileStream(localFilePath, FileMode.Create);
+                await student.file.CopyToAsync(stream);
 
-            using var stream = new FileStream(localFilePath, FileMode.Create);
-            await student.file.CopyToAsync (stream);
+                var UrlFilePath = $"{httpContextAccessor.HttpContext.Request.Scheme}://{httpContextAccessor.HttpContext.Request.Host}{httpContextAccessor.HttpContext.Request.PathBase}/Images/Students/{existing.RegistrationNo}{fileExtension}";
 
-            var UrlFilePath = $"{httpContextAccessor.HttpContext.Request.Scheme}://{httpContextAccessor.HttpContext.Request.Host}{httpContextAccessor.HttpContext.Request.PathBase}/Images/Students/{existing.RegistrationNo}{fileExtension}";
+                existing.Picture = UrlFilePath;
+            }
+
+           
 
 
             existing.StudentName = student.StudentName;
@@ -147,7 +153,7 @@ namespace InstituteWebAPI.Repositories.Repository
             existing.Qualification = student.Qualification;
             existing.Institute = student.Institute;
             existing.FatherCnic = student.FatherCnic;
-            existing.Picture = UrlFilePath;
+            
             existing.Remarks = student.Remarks;
             existing.ModifiedAt = DateTime.Now;
 

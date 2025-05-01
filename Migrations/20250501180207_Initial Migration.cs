@@ -45,6 +45,7 @@ namespace InstituteWebAPI.Migrations
                 columns: table => new
                 {
                     TeacherID = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    Serial = table.Column<int>(type: "int", nullable: false),
                     RegistrationNo = table.Column<string>(type: "nvarchar(max)", nullable: false),
                     TeacherName = table.Column<string>(type: "nvarchar(max)", nullable: false),
                     FatherName = table.Column<string>(type: "nvarchar(max)", nullable: false),
@@ -129,26 +130,6 @@ namespace InstituteWebAPI.Migrations
                 });
 
             migrationBuilder.CreateTable(
-                name: "Sections",
-                columns: table => new
-                {
-                    SectionID = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
-                    SectionName = table.Column<string>(type: "nvarchar(max)", nullable: false),
-                    CourseID = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
-                    IsDeleted = table.Column<bool>(type: "bit", nullable: false)
-                },
-                constraints: table =>
-                {
-                    table.PrimaryKey("PK_Sections", x => x.SectionID);
-                    table.ForeignKey(
-                        name: "FK_Sections_Courses_CourseID",
-                        column: x => x.CourseID,
-                        principalTable: "Courses",
-                        principalColumn: "CourseID",
-                        onDelete: ReferentialAction.Cascade);
-                });
-
-            migrationBuilder.CreateTable(
                 name: "TeacherCourses",
                 columns: table => new
                 {
@@ -175,19 +156,33 @@ namespace InstituteWebAPI.Migrations
                 });
 
             migrationBuilder.CreateTable(
-                name: "TimeSlots",
+                name: "Sections",
                 columns: table => new
                 {
-                    TimeSlotID = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    SectionID = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    SectionName = table.Column<string>(type: "nvarchar(max)", nullable: false),
                     StartTime = table.Column<DateTime>(type: "datetime2", nullable: false),
                     EndTime = table.Column<DateTime>(type: "datetime2", nullable: false),
-                    TermID = table.Column<Guid>(type: "uniqueidentifier", nullable: true)
+                    TermID = table.Column<Guid>(type: "uniqueidentifier", nullable: true),
+                    CourseID = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    SessionID = table.Column<Guid>(type: "uniqueidentifier", nullable: true)
                 },
                 constraints: table =>
                 {
-                    table.PrimaryKey("PK_TimeSlots", x => x.TimeSlotID);
+                    table.PrimaryKey("PK_Sections", x => x.SectionID);
                     table.ForeignKey(
-                        name: "FK_TimeSlots_Term_TermID",
+                        name: "FK_Sections_Courses_CourseID",
+                        column: x => x.CourseID,
+                        principalTable: "Courses",
+                        principalColumn: "CourseID",
+                        onDelete: ReferentialAction.Cascade);
+                    table.ForeignKey(
+                        name: "FK_Sections_Sessions_SessionID",
+                        column: x => x.SessionID,
+                        principalTable: "Sessions",
+                        principalColumn: "SessionID");
+                    table.ForeignKey(
+                        name: "FK_Sections_Term_TermID",
                         column: x => x.TermID,
                         principalTable: "Term",
                         principalColumn: "TermID");
@@ -199,7 +194,7 @@ namespace InstituteWebAPI.Migrations
                 {
                     StudentID = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
                     Serial = table.Column<int>(type: "int", nullable: false),
-                    RegDate = table.Column<string>(type: "nvarchar(max)", nullable: false),
+                    RegDate = table.Column<DateTime>(type: "datetime2", nullable: false),
                     RegistrationNo = table.Column<string>(type: "nvarchar(max)", nullable: false),
                     StudentName = table.Column<string>(type: "nvarchar(max)", nullable: false),
                     FatherName = table.Column<string>(type: "nvarchar(max)", nullable: false),
@@ -215,10 +210,10 @@ namespace InstituteWebAPI.Migrations
                     Institute = table.Column<string>(type: "nvarchar(max)", nullable: false),
                     FatherCnic = table.Column<string>(type: "nvarchar(max)", nullable: true),
                     Picture = table.Column<string>(type: "nvarchar(max)", nullable: true),
-                    AdmissionDate = table.Column<DateTime>(type: "datetime2", nullable: false),
                     CreatedAt = table.Column<DateTime>(type: "datetime2", nullable: false),
                     ModifiedAt = table.Column<DateTime>(type: "datetime2", nullable: false),
-                    IsEnrolled = table.Column<bool>(type: "bit", nullable: false)
+                    IsEnrolled = table.Column<bool>(type: "bit", nullable: false),
+                    Remarks = table.Column<string>(type: "nvarchar(max)", nullable: false)
                 },
                 constraints: table =>
                 {
@@ -238,7 +233,6 @@ namespace InstituteWebAPI.Migrations
                     CurrentClassID = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
                     ClassID = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
                     SectionID = table.Column<Guid>(type: "uniqueidentifier", nullable: true),
-                    TimeSlotID = table.Column<Guid>(type: "uniqueidentifier", nullable: true),
                     TeacherID = table.Column<Guid>(type: "uniqueidentifier", nullable: true),
                     SessionID = table.Column<Guid>(type: "uniqueidentifier", nullable: true),
                     TermID = table.Column<Guid>(type: "uniqueidentifier", nullable: true),
@@ -274,22 +268,17 @@ namespace InstituteWebAPI.Migrations
                         column: x => x.TermID,
                         principalTable: "Term",
                         principalColumn: "TermID");
-                    table.ForeignKey(
-                        name: "FK_CurrentClasses_TimeSlots_TimeSlotID",
-                        column: x => x.TimeSlotID,
-                        principalTable: "TimeSlots",
-                        principalColumn: "TimeSlotID");
                 });
 
             migrationBuilder.CreateTable(
-                name: "StudentCourses",
+                name: "Admissions",
                 columns: table => new
                 {
-                    StudentCourseID = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    AdmissionID = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
                     StudentID = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
                     RegistrationDate = table.Column<DateTime>(type: "datetime2", nullable: false),
                     CourseID = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
-                    LeavingDate = table.Column<DateTime>(type: "datetime2", nullable: false),
+                    LeavingDate = table.Column<DateTime>(type: "datetime2", nullable: true),
                     CreatedAt = table.Column<DateTime>(type: "datetime2", nullable: false),
                     ModifiedAt = table.Column<DateTime>(type: "datetime2", nullable: false),
                     Status = table.Column<string>(type: "nvarchar(max)", nullable: false),
@@ -297,15 +286,15 @@ namespace InstituteWebAPI.Migrations
                 },
                 constraints: table =>
                 {
-                    table.PrimaryKey("PK_StudentCourses", x => x.StudentCourseID);
+                    table.PrimaryKey("PK_Admissions", x => x.AdmissionID);
                     table.ForeignKey(
-                        name: "FK_StudentCourses_Courses_CourseID",
+                        name: "FK_Admissions_Courses_CourseID",
                         column: x => x.CourseID,
                         principalTable: "Courses",
                         principalColumn: "CourseID",
                         onDelete: ReferentialAction.Cascade);
                     table.ForeignKey(
-                        name: "FK_StudentCourses_Students_StudentID",
+                        name: "FK_Admissions_Students_StudentID",
                         column: x => x.StudentID,
                         principalTable: "Students",
                         principalColumn: "StudentID",
@@ -377,9 +366,9 @@ namespace InstituteWebAPI.Migrations
                 {
                     StudentMarkID = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
                     ObtainedMarks = table.Column<float>(type: "real", nullable: false),
-                    TestID = table.Column<Guid>(type: "uniqueidentifier", nullable: true),
-                    StudentID = table.Column<Guid>(type: "uniqueidentifier", nullable: true),
-                    TermID = table.Column<Guid>(type: "uniqueidentifier", nullable: true)
+                    TestID = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    StudentID = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    TermID = table.Column<Guid>(type: "uniqueidentifier", nullable: false)
                 },
                 constraints: table =>
                 {
@@ -388,18 +377,31 @@ namespace InstituteWebAPI.Migrations
                         name: "FK_StudentMarks_Students_StudentID",
                         column: x => x.StudentID,
                         principalTable: "Students",
-                        principalColumn: "StudentID");
+                        principalColumn: "StudentID",
+                        onDelete: ReferentialAction.Cascade);
                     table.ForeignKey(
                         name: "FK_StudentMarks_Term_TermID",
                         column: x => x.TermID,
                         principalTable: "Term",
-                        principalColumn: "TermID");
+                        principalColumn: "TermID",
+                        onDelete: ReferentialAction.Cascade);
                     table.ForeignKey(
                         name: "FK_StudentMarks_Tests_TestID",
                         column: x => x.TestID,
                         principalTable: "Tests",
-                        principalColumn: "TestID");
+                        principalColumn: "TestID",
+                        onDelete: ReferentialAction.Cascade);
                 });
+
+            migrationBuilder.CreateIndex(
+                name: "IX_Admissions_CourseID",
+                table: "Admissions",
+                column: "CourseID");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_Admissions_StudentID",
+                table: "Admissions",
+                column: "StudentID");
 
             migrationBuilder.CreateIndex(
                 name: "IX_Classes_CourseID",
@@ -442,24 +444,19 @@ namespace InstituteWebAPI.Migrations
                 column: "TermID");
 
             migrationBuilder.CreateIndex(
-                name: "IX_CurrentClasses_TimeSlotID",
-                table: "CurrentClasses",
-                column: "TimeSlotID");
-
-            migrationBuilder.CreateIndex(
                 name: "IX_Sections_CourseID",
                 table: "Sections",
                 column: "CourseID");
 
             migrationBuilder.CreateIndex(
-                name: "IX_StudentCourses_CourseID",
-                table: "StudentCourses",
-                column: "CourseID");
+                name: "IX_Sections_SessionID",
+                table: "Sections",
+                column: "SessionID");
 
             migrationBuilder.CreateIndex(
-                name: "IX_StudentCourses_StudentID",
-                table: "StudentCourses",
-                column: "StudentID");
+                name: "IX_Sections_TermID",
+                table: "Sections",
+                column: "TermID");
 
             migrationBuilder.CreateIndex(
                 name: "IX_StudentMarks_StudentID",
@@ -505,21 +502,16 @@ namespace InstituteWebAPI.Migrations
                 name: "IX_Tests_TermMonthID",
                 table: "Tests",
                 column: "TermMonthID");
-
-            migrationBuilder.CreateIndex(
-                name: "IX_TimeSlots_TermID",
-                table: "TimeSlots",
-                column: "TermID");
         }
 
         /// <inheritdoc />
         protected override void Down(MigrationBuilder migrationBuilder)
         {
             migrationBuilder.DropTable(
-                name: "ClassStudents");
+                name: "Admissions");
 
             migrationBuilder.DropTable(
-                name: "StudentCourses");
+                name: "ClassStudents");
 
             migrationBuilder.DropTable(
                 name: "StudentMarks");
@@ -549,16 +541,13 @@ namespace InstituteWebAPI.Migrations
                 name: "Sections");
 
             migrationBuilder.DropTable(
-                name: "Sessions");
-
-            migrationBuilder.DropTable(
                 name: "Teachers");
 
             migrationBuilder.DropTable(
-                name: "TimeSlots");
+                name: "Courses");
 
             migrationBuilder.DropTable(
-                name: "Courses");
+                name: "Sessions");
 
             migrationBuilder.DropTable(
                 name: "Term");
