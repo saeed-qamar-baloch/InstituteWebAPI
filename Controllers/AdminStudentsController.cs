@@ -56,16 +56,22 @@ namespace InstituteWebAPI.Controllers
         [HttpPost]
         public async Task<IActionResult> Add([FromForm]AddStudentDto dto)
         {
+            
             var domain = mapper.Map<Students>(dto);
             domain.CreatedAt = DateTime.Now;
             domain.ModifiedAt = DateTime.Now;
 
             domain.file = dto.file;
           
-            
-
+           
 
             var created = await studentRepository.AddAsync(domain);
+
+            if (created == null)
+            {
+                // If the student already exists, return a BadRequest with an error message
+                return BadRequest(new { errors = new[] { "Student already exists with the same name or contact details." } });
+            }
             return Ok(mapper.Map<StudentDto>(created));
         }
 

@@ -33,16 +33,20 @@ public class TeacherRepository : ITeacherRepository
         teacher.RegistrationNo = $"RT-{monthYear}-{formattedSerial}";
 
 
+        if(teacher.file!= null)
+        {
+            var fileExtension = Path.GetExtension(teacher.file.FileName);
 
-        var fileExtension = Path.GetExtension(teacher.file.FileName);
+            var localFilePath = Path.Combine(webHostEnvironment.ContentRootPath, "Images", "Teachers", $"{teacher.RegistrationNo}{fileExtension}");
+            var urlPath = $"{httpContextAccessor.HttpContext.Request.Scheme}://{httpContextAccessor.HttpContext.Request.Host}{httpContextAccessor.HttpContext.Request.PathBase}/Images/Teachers/{teacher.RegistrationNo}{fileExtension}";
 
-        var localFilePath = Path.Combine(webHostEnvironment.ContentRootPath, "Images", "Teachers", $"{teacher.RegistrationNo}{fileExtension}");
-        var urlPath = $"{httpContextAccessor.HttpContext.Request.Scheme}://{httpContextAccessor.HttpContext.Request.Host}{httpContextAccessor.HttpContext.Request.PathBase}/Images/Teachers/{teacher.RegistrationNo}{fileExtension}";
+            using var stream = new FileStream(localFilePath, FileMode.Create);
+            await teacher.file.CopyToAsync(stream);
 
-        using var stream = new FileStream(localFilePath, FileMode.Create);
-        await teacher.file.CopyToAsync(stream);
+            teacher.Picture = urlPath;
+        }
 
-        teacher.Picture = urlPath;
+       
         await dbContext.Teachers.AddAsync(teacher);
         await dbContext.SaveChangesAsync();
         return teacher;

@@ -16,6 +16,36 @@ namespace InstituteWebAPI.Repositories.Repository
 
         public async Task<Sections> AddAsync(Sections section)
         {
+            var GetCourse = await _dbContext.Courses.FindAsync(section.CourseID);
+
+          
+
+
+            if(GetCourse.CourseName == "English Language")
+            {
+                
+
+               var ActiveTerm = _dbContext.Term.Where(t => t.IsActive).ToList();
+                if (ActiveTerm.Any())
+                {
+
+                    section.term = ActiveTerm.FirstOrDefault();
+                }
+
+                
+            }
+
+            if(GetCourse.CourseName == "Tuition")
+            {
+                var ActiveSession = _dbContext.Sessions.Where(t => t.IsActive);
+
+                if(ActiveSession.Any())
+                {
+                    section.Sessions= ActiveSession.FirstOrDefault();
+                }
+            }
+
+
             await _dbContext.Sections.AddAsync(section);
             await _dbContext.SaveChangesAsync();
             return section;

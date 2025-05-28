@@ -15,7 +15,21 @@ namespace InstituteWebAPI.Repositories.Repository
         }
         public async Task<Term> AddAsync(Term term)
         {
+
+            if (term.IsActive)
+            {
+                var activeTerms = _dbContext.Term.Where(term => term.IsActive).ToList();
+
+                foreach (var ActiveTerm in activeTerms)
+                {
+                    ActiveTerm.IsActive = false;
+                }
+                
+
+            }
+
             await _dbContext.Term.AddAsync(term);
+
             await _dbContext.SaveChangesAsync();
             return term;
         }
@@ -26,7 +40,7 @@ namespace InstituteWebAPI.Repositories.Repository
             if (ExistingTerm == null)
                 return null;
             _dbContext.Term.Remove(ExistingTerm);
-            _dbContext.Remove(ExistingTerm);
+            await _dbContext.SaveChangesAsync();
             return ExistingTerm;
 
             
@@ -34,7 +48,7 @@ namespace InstituteWebAPI.Repositories.Repository
 
         public async Task<List<Term>> GetAllAsync()
         {
-            return (await _dbContext.Term.ToListAsync());
+            return (await _dbContext.Term.OrderByDescending(t=> t.IsActive).ThenByDescending(t=> t.TermStart).ToListAsync());
         }
 
         public async Task<Term?> GetAsync(Guid id)
@@ -55,6 +69,20 @@ namespace InstituteWebAPI.Repositories.Repository
             var existingTerm = await _dbContext.Term.FirstOrDefaultAsync(t => t.TermID == termID);
             if (existingTerm == null)
                 return null;
+            if (term.IsActive)
+            {
+                var activeTerms = _dbContext.Term.Where(term => term.IsActive).ToList();
+
+                foreach (var ActiveTerm in activeTerms)
+                {
+                    ActiveTerm.IsActive = false;
+                }
+
+
+            }
+
+
+
             existingTerm.TermID = term.TermID;
             existingTerm.TermName = term.TermName;
             existingTerm.TermStart = term.TermStart;

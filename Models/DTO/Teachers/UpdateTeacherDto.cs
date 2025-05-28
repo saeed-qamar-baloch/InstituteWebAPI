@@ -2,32 +2,24 @@
 
 public class UpdateTeacherDto
 {
-    [Required]
+    public Guid TeacherID { get; set; }
+    public string RegistrationNo { get; set; }
     public string TeacherName { get; set; }
-    [Required]
     public string FatherName { get; set; }
-    [Required]
     public string Gender { get; set; }
-    [Required]
+    public DateTime DateOfBirth { get; set; }
     public string Address { get; set; }
-    [Required]
     public string City { get; set; }
-    [Required]
     public string Region { get; set; }
-  
     public string EmergencyContact { get; set; }
-    [Required]
     public string Contact { get; set; }
-    [Required]
-    public string FatherOccupation { get; set; }
-    [Required]
+    public string? FatherOccupation { get; set; }
     public string Qualification { get; set; }
-    [Required]
     public string Institute { get; set; }
- 
-    public string Cnic { get; set; }
-   
-    public string Picture { get; set; }
-    public string Experience { get; set; }
+    public string? Cnic { get; set; }
+    public string? Picture { get; set; }
+    public string? Experience { get; set; }
+    public DateTime RegistrationDate { get; set; }
     public bool IsTeaching { get; set; }
+    public IFormFile? file { get; set; }
 }

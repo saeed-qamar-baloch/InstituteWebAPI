@@ -3,6 +3,9 @@ using InstituteWebAPI.Data;
 using InstituteWebAPI.Repositories.IRepository;
 using InstituteWebApp.Models.Domain;
 using Microsoft.EntityFrameworkCore;
+using SixLabors.ImageSharp;
+using SixLabors.ImageSharp.Formats.Jpeg;
+using SixLabors.ImageSharp.Processing;
 
 namespace InstituteWebAPI.Repositories.Repository
 {
@@ -86,8 +89,9 @@ namespace InstituteWebAPI.Repositories.Repository
             if (StudentExists)
             {
                 return null;
+               
             }
-           
+
 
             // Get the current maximum serial number
             int maxSerial = await _DbContext.Students.MaxAsync(s => (int?)s.Serial) ?? 0;
@@ -105,11 +109,22 @@ namespace InstituteWebAPI.Repositories.Repository
             var localFilePath = Path.Combine(webHostEnvironment.ContentRootPath, "Images", "Students", $"{student.RegistrationNo}{fileExtension}");
 
 
-           
+            using (var image = await Image.LoadAsync(student.file.OpenReadStream()))
+            {
+                image.Mutate(x=> x.Resize(600,0));
 
-            using var stream = new FileStream(localFilePath, FileMode.Create);
+                var jpegEncoder = new JpegEncoder()
+                {
+                    Quality = 75
+                };
 
-            await student.file.CopyToAsync(stream);
+                await image.SaveAsync(localFilePath, jpegEncoder);
+
+            }
+
+            //    using var stream = new FileStream(localFilePath, FileMode.Create);
+
+            //await student.file.CopyToAsync(stream);
 
             var urlFilePath = $"{httpContextAccessor.HttpContext.Request.Scheme}://{httpContextAccessor.HttpContext.Request.Host}{httpContextAccessor.HttpContext.Request.PathBase}/Images/Students/{student.RegistrationNo}{fileExtension}";
 
@@ -132,9 +147,21 @@ namespace InstituteWebAPI.Repositories.Repository
                 var fileExtension = Path.GetExtension(student.file.FileName);
 
                 var localFilePath = Path.Combine(webHostEnvironment.ContentRootPath, "Images", "Students", $"{existing.RegistrationNo}{fileExtension}");
+                using (var image = await Image.LoadAsync(student.file.OpenReadStream()))
+                {
+                    image.Mutate(x => x.Resize(600, 0));
 
-                using var stream = new FileStream(localFilePath, FileMode.Create);
-                await student.file.CopyToAsync(stream);
+                    var jpegEncoder = new JpegEncoder()
+                    {
+                        Quality = 75
+                    };
+
+                    await image.SaveAsync(localFilePath, jpegEncoder);
+
+                }
+
+
+            
 
                 var UrlFilePath = $"{httpContextAccessor.HttpContext.Request.Scheme}://{httpContextAccessor.HttpContext.Request.Host}{httpContextAccessor.HttpContext.Request.PathBase}/Images/Students/{existing.RegistrationNo}{fileExtension}";
 
@@ -143,7 +170,7 @@ namespace InstituteWebAPI.Repositories.Repository
 
            
 
-
+            
             existing.StudentName = student.StudentName;
             existing.FatherName = student.FatherName;
             existing.Address = student.Address;

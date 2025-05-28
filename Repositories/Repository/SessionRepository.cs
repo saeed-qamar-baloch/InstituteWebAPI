@@ -16,6 +16,17 @@ namespace InstituteWebAPI.Repositories.Repository
 
         public async Task<Sessions> AddAsync(Sessions session)
         {
+            
+
+            if(session.IsActive)
+            {
+                var ActiveSessions= await dbContext.Sessions.Where(s => s.IsActive).ToListAsync();
+                
+                foreach(var sessions in ActiveSessions)
+                {
+                    sessions.IsActive = false;
+                }
+            }
             await dbContext.Sessions.AddAsync(session);
             await dbContext.SaveChangesAsync();
             return session;
@@ -50,6 +61,15 @@ namespace InstituteWebAPI.Repositories.Repository
         {
             var existing = await dbContext.Sessions.FirstOrDefaultAsync(s => s.SessionID == id);
             if (existing == null) return null;
+            if (session.IsActive)
+            {
+                var ActiveSessions = await dbContext.Sessions.Where(s => s.IsActive).ToListAsync();
+
+                foreach (var sessions in ActiveSessions)
+                {
+                    sessions.IsActive = false;
+                }
+            }
 
             existing.SessionName = session.SessionName;
             existing.SessionStartDate = session.SessionStartDate;

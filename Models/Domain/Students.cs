@@ -33,10 +33,9 @@ namespace InstituteWebApp.Models.Domain
         public DateTime CreatedAt { get; set; }
         public DateTime ModifiedAt { get; set; }
         public bool IsEnrolled { get; set; }
-        public string Remarks { get; set; }
+        public string? Remarks { get; set; }
         [NotMapped]
         public IFormFile file { get; set; }
-
 
 
         public List<Admissions> Admissions { get; set; }

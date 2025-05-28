@@ -57,7 +57,7 @@ namespace InstituteWebAPI.Controllers
 
             couseDomainModel = await coursesRepository.AddAsync(couseDomainModel);
 
-            var courseDto = mapper.Map<AddTermDto>(couseDomainModel);
+            var courseDto = mapper.Map<AddCourseDto>(couseDomainModel);
             return Ok(courseDto);
         }
         [HttpPut]

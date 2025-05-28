@@ -31,9 +31,9 @@ namespace InstituteWebAPI.Models.DTO.Students
         [Required]
         public string Institute { get; set; }
         public string? FatherCnic { get; set; }
-      //  public string? Picture { get; set; }
+       public string? Picture { get; set; }
         public bool IsEnrolled { get; set; }
-        public string Remarks { get; set; }
+        public string? Remarks { get; set; }
         public IFormFile file { get; set; }
     }
 }

@@ -10,7 +10,6 @@ namespace InstituteWebAPI.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
-    [Authorize]
     public class AdminTermController : ControllerBase
     {
         private readonly ITermRepository termRepository;
