@@ -23,42 +23,52 @@ namespace InstituteWebAPI.Repositories.Repository
 
         }
 
-        public async Task<List<Students>> GetAllAsync(string? filterOn = null, string? filterQuery = null, string? sortBy = null, bool isAscending = true, int pageNumber = 1, int pageSize = 100)
+        public async Task<List<Students>> GetAllAsync(
+     string? filterOn = null,
+     string? filterQuery = null,
+     string? sortBy = null,
+     bool isAscending = true,
+     int pageNumber = 1,
+     int pageSize = 100)
         {
-
             var students = _DbContext.Students.Include(x => x.Village).AsQueryable();
 
-            //filter
-            if (string.IsNullOrWhiteSpace(filterOn) == false && string.IsNullOrWhiteSpace(filterQuery) == false)
+            // 🔍 Search in multiple fields
+            if (!string.IsNullOrWhiteSpace(filterQuery))
             {
-                if (filterOn.Equals("Village", StringComparison.OrdinalIgnoreCase))
-                {
-                    students = students.Where(x => x.Village.VillageName.Contains(filterQuery));
-                }
+                students = students.Where(x =>
+                    x.StudentName.Contains(filterQuery) ||
+                    x.FatherName.Contains(filterQuery) ||
+                    x.FatherContact.Contains(filterQuery) ||
+                    x.StudentContact.Contains(filterQuery));
             }
 
-            //sort
-            if (string.IsNullOrWhiteSpace(sortBy) == false)
+            // 🎯 Filter on Status
+            if (!string.IsNullOrWhiteSpace(filterOn) && filterOn.Equals("Status", StringComparison.OrdinalIgnoreCase))
             {
-                if (sortBy.Equals("RegDate", StringComparison.OrdinalIgnoreCase))
-                {
-                    students = isAscending ? students.OrderBy(x => x.RegDate) : students.OrderByDescending(x => x.RegDate);
-                }
-
-
-                else if (sortBy.Equals("IsEnrolled", StringComparison.OrdinalIgnoreCase))
-                {
-                    students = isAscending ? students.OrderBy(x => x.IsEnrolled) : students.OrderByDescending(x => x.RegDate);
-                }
+                if (filterQuery?.ToLower() == "enrolled")
+                    students = students.Where(x => x.IsEnrolled);
+                else if (filterQuery?.ToLower() == "notenrolled")
+                    students = students.Where(x => !x.IsEnrolled);
             }
 
-            //Pagination 
+            // ↕️ Sorting
+            if (!string.IsNullOrWhiteSpace(sortBy))
+            {
+                students = sortBy.ToLower() switch
+                {
+                    "regdate" => isAscending ? students.OrderBy(x => x.RegDate) : students.OrderByDescending(x => x.RegDate),
+                    "studentname" => isAscending ? students.OrderBy(x => x.StudentName) : students.OrderByDescending(x => x.StudentName),
+                    "fathername" => isAscending ? students.OrderBy(x => x.FatherName) : students.OrderByDescending(x => x.FatherName),
+                    "fathercontact" => isAscending ? students.OrderBy(x => x.FatherContact) : students.OrderByDescending(x => x.FatherContact),
+                    "isenrolled" => isAscending ? students.OrderBy(x => x.IsEnrolled) : students.OrderByDescending(x => x.IsEnrolled),
+                    _ => students
+                };
+            }
+
+            // 📄 Pagination
             var skipResult = (pageNumber - 1) * pageSize;
-
-
             return await students.Skip(skipResult).Take(pageSize).ToListAsync();
-
-            // return await _DbContext.Students.Include(s => s.Village).ToListAsync();
         }
 
         public async Task<Students?> GetByIdAsync(Guid id)
