@@ -8,5 +8,7 @@ namespace InstituteWebAPI.Models.DTO.TeacherCourse
         public CourseDto Course { get; set; }
         public TeacherDto Teacher { get; set; }
         public bool CourseIsTaken { get; set; }
+        public DateTime? FromDate { get; set; }
+        public DateTime? ToDate { get; set; }
     }
 }

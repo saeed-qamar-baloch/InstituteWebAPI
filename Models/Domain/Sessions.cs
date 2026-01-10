@@ -11,7 +11,6 @@ namespace InstituteWebApp.Models.Domain
         public DateTime SessionEndDate { get; set; }
         public bool IsActive { get; set; }
         public List<CurrentClass> CurrentClasses { get; set; }
-        public List<Sections> Sections { get; set; }
-
+        public List<Slots> Slots { get; set; }
     }
 }

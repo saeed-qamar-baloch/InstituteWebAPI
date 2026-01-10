@@ -9,6 +9,6 @@ namespace InstituteWebAPI.Repositories.IRepository
         Task<List<CurrentClass>> GetAllAsync();
         Task<CurrentClass?> UpdateAsync(Guid id, CurrentClass currentClass);
         Task<CurrentClass?> DeleteAsync(Guid id);
-        Task<List<CurrentClass>> SearchCurrentClassesAsync(Guid? classID, Guid? sectionID, Guid? teacherID, Guid? sessionID, Guid? termID, bool? isActive);
+        Task<List<CurrentClass>> SearchCurrentClassesAsync(Guid? classID, Guid? slotID, Guid? teacherID, Guid? sessionID, Guid? termID, bool? isActive);
     }
 }

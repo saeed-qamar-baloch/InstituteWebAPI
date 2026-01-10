@@ -40,23 +40,37 @@ namespace InstituteWebAPI.Controllers
         [ValidateModel]
         public async Task<IActionResult> Create(AddAdmissionDto dto)
         {
-            var admission = mapper.Map<Admissions>(dto);
-            admission.CreatedAt = DateTime.UtcNow;
-            admission.ModifiedAt = DateTime.UtcNow;
+            try
+            {
+                var admission = mapper.Map<Admissions>(dto);
+                admission.CreatedAt = DateTime.UtcNow;
+                admission.ModifiedAt = DateTime.UtcNow;
 
-            admission = await repository.AddAsync(admission);
-            return Ok(mapper.Map<AdmissionDto>(admission));
+                admission = await repository.AddAsync(admission);
+                return Ok(mapper.Map<AdmissionDto>(admission));
+            }
+            catch (InvalidOperationException ex)
+            {
+                return BadRequest(ex.Message);
+            }
         }
-        
+
         [HttpPut("{id:Guid}")]
         [ValidateModel]
         public async Task<IActionResult> Update(Guid id, UpdateAdmissionDto dto)
         {
-            var updated = mapper.Map<Admissions>(dto);
-            updated = await repository.UpdateAsync(id, updated);
+            try
+            {
+                var updated = mapper.Map<Admissions>(dto);
+                updated = await repository.UpdateAsync(id, updated);
 
-            if (updated == null) return NotFound();
-            return Ok(mapper.Map<AdmissionDto>(updated));
+                if (updated == null) return NotFound();
+                return Ok(mapper.Map<AdmissionDto>(updated));
+            }
+            catch (InvalidOperationException ex)
+            {
+                return BadRequest(ex.Message);
+            }
         }
 
         [HttpDelete("{id:Guid}")]

@@ -55,6 +55,8 @@ namespace InstituteWebAPI.Repositories.Repository
             existing.TeacherID = teacherCourse.TeacherID;
             existing.CourseID = teacherCourse.CourseID;
             existing.CourseIsTaken = teacherCourse.CourseIsTaken;
+            existing.FromDate = teacherCourse.FromDate;
+            existing.ToDate = teacherCourse.ToDate;
 
             await dbContext.SaveChangesAsync();
             return existing;

@@ -7,14 +7,18 @@ namespace InstituteWebApp.Models.Domain
     {
         [Key]
         public Guid TeacherCourseID { get; set; }
+
         public Guid TeacherID { get; set; }
         [ForeignKey("TeacherID")]
         public Teachers Teacher { get; set; }
+
         public Guid CourseID { get; set; }
         [ForeignKey("CourseID")]
         public Courses Course { get; set; }
-        
+
         public bool CourseIsTaken { get; set; }
 
+        public DateTime? FromDate { get; set; }
+        public DateTime? ToDate { get; set; }
     }
 }

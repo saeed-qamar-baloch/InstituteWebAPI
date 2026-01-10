@@ -4,6 +4,7 @@ using InstituteWebAPI.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -11,9 +12,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace InstituteWebAPI.Migrations
 {
     [DbContext(typeof(RozhnInstituteDbContext))]
-    partial class RozhnInstituteDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260110061250_AddSectionEntity")]
+    partial class AddSectionEntity
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -144,9 +147,6 @@ namespace InstituteWebAPI.Migrations
                     b.Property<bool>("IsActive")
                         .HasColumnType("bit");
 
-                    b.Property<Guid?>("SectionID")
-                        .HasColumnType("uniqueidentifier");
-
                     b.Property<Guid?>("SessionID")
                         .HasColumnType("uniqueidentifier");
 
@@ -162,8 +162,6 @@ namespace InstituteWebAPI.Migrations
                     b.HasKey("CurrentClassID");
 
                     b.HasIndex("ClassID");
-
-                    b.HasIndex("SectionID");
 
                     b.HasIndex("SessionID");
 
@@ -182,11 +180,16 @@ namespace InstituteWebAPI.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uniqueidentifier");
 
+                    b.Property<Guid>("CurrentClassID")
+                        .HasColumnType("uniqueidentifier");
+
                     b.Property<string>("Name")
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
                     b.HasKey("SectionID");
+
+                    b.HasIndex("CurrentClassID");
 
                     b.ToTable("Sections");
                 });
@@ -626,10 +629,6 @@ namespace InstituteWebAPI.Migrations
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
-                    b.HasOne("InstituteWebApp.Models.Domain.Section", "Section")
-                        .WithMany()
-                        .HasForeignKey("SectionID");
-
                     b.HasOne("InstituteWebApp.Models.Domain.Sessions", "Session")
                         .WithMany("CurrentClasses")
                         .HasForeignKey("SessionID");
@@ -648,8 +647,6 @@ namespace InstituteWebAPI.Migrations
 
                     b.Navigation("Class");
 
-                    b.Navigation("Section");
-
                     b.Navigation("Session");
 
                     b.Navigation("Slot");
@@ -657,6 +654,17 @@ namespace InstituteWebAPI.Migrations
                     b.Navigation("Teacher");
 
                     b.Navigation("Term");
+                });
+
+            modelBuilder.Entity("InstituteWebApp.Models.Domain.Section", b =>
+                {
+                    b.HasOne("InstituteWebApp.Models.Domain.CurrentClass", "CurrentClass")
+                        .WithMany()
+                        .HasForeignKey("CurrentClassID")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("CurrentClass");
                 });
 
             modelBuilder.Entity("InstituteWebApp.Models.Domain.Slots", b =>

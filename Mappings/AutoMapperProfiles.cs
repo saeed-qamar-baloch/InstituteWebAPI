@@ -4,8 +4,9 @@ using InstituteWebAPI.Models.DTO.Classes;
 using InstituteWebAPI.Models.DTO.ClassStudents;
 using InstituteWebAPI.Models.DTO.Courses;
 using InstituteWebAPI.Models.DTO.CurrentClasses;
-using InstituteWebAPI.Models.DTO.Sections;
+using InstituteWebAPI.Models.DTO.Section;
 using InstituteWebAPI.Models.DTO.Sessions;
+using InstituteWebAPI.Models.DTO.Slots;
 using InstituteWebAPI.Models.DTO.StudentMarks;
 using InstituteWebAPI.Models.DTO.Students;
 using InstituteWebAPI.Models.DTO.TeacherCourse;
@@ -18,7 +19,7 @@ using static System.Net.Mime.MediaTypeNames;
 
 namespace InstituteWebAPI.Mappings
 {
-    public class AutoMapperProfiles:Profile
+    public class AutoMapperProfiles : Profile
     {
         public AutoMapperProfiles()
         {
@@ -35,15 +36,19 @@ namespace InstituteWebAPI.Mappings
             CreateMap<AddVillageDto, Village>().ReverseMap();
             CreateMap<VillageUpdateRequestDto, Village>().ReverseMap();
 
-
-
             CreateMap<AddClassesDto, Classes>().ReverseMap();
             CreateMap<Classes, ClassesDto>().ReverseMap();
             CreateMap<ClassUpdateRequestDto, Classes>().ReverseMap();
 
-            CreateMap<Sections, SectionsDto>().ReverseMap();
-            CreateMap<AddSectionsDto, Sections>().ReverseMap();
-            CreateMap<SectionsUpdateDto, Sections>().ReverseMap();
+            // Slots (renamed from Sections)
+            CreateMap<Slots, SlotsDto>().ReverseMap();
+            CreateMap<AddSlotsDto, Slots>().ReverseMap();
+            CreateMap<SlotsUpdateDto, Slots>().ReverseMap();
+
+            // Section (simple: SectionID, Name, CurrentClassID)
+            CreateMap<Section, SectionDto>().ReverseMap();
+            CreateMap<AddSectionDto, Section>().ReverseMap();
+            CreateMap<UpdateSectionDto, Section>().ReverseMap();
 
             CreateMap<Sessions, SessionsDto>().ReverseMap();
             CreateMap<Sessions, AddSessionsDto>().ReverseMap();
@@ -52,7 +57,6 @@ namespace InstituteWebAPI.Mappings
             CreateMap<AddTeacherDto, Teachers>();
             CreateMap<UpdateTeacherDto, Teachers>();
             CreateMap<Teachers, TeacherDto>();
-
 
             CreateMap<AddTeacherCourseDto, TeacherCourses>();
             CreateMap<UpdateTeacherCourseDto, TeacherCourses>();
@@ -77,7 +81,6 @@ namespace InstituteWebAPI.Mappings
             CreateMap<AddStudentMarksDto, StudentMarks>();
             CreateMap<UpdateStudentMarksDto, StudentMarks>();
             CreateMap<StudentMarks, StudentMarksDto>();
-
 
             CreateMap<AddClassStudentDto, ClassStudents>();
             CreateMap<UpdateClassStudentDto, ClassStudents>();

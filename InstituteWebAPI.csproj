@@ -21,7 +21,7 @@
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
     </PackageReference>
     <PackageReference Include="Microsoft.IdentityModel.Tokens" Version="8.8.0" />
-    <PackageReference Include="SixLabors.ImageSharp" Version="3.1.8" />
+    <PackageReference Include="SixLabors.ImageSharp" Version="3.1.11" />
     <PackageReference Include="Swashbuckle.AspNetCore" Version="6.4.0" />
     <PackageReference Include="System.IdentityModel.Tokens.Jwt" Version="8.8.0" />
   </ItemGroup>
@@ -29,6 +29,15 @@
   <ItemGroup>
     <Folder Include="Images\Teachers\" />
     <Folder Include="Images\Students\" />
+    <Folder Include="InstituteWebAPI\Controllers\" />
+    <Folder Include="InstituteWebAPI\Models\Domain\" />
+    <Folder Include="InstituteWebAPI\Models\DTO\ClassStudents\" />
+    <Folder Include="InstituteWebAPI\Models\DTO\Section\" />
+    <Folder Include="InstituteWebAPI\Models\DTO\Slots\" />
+    <Folder Include="InstituteWebAPI\Repositories\IRepository\" />
+    <Folder Include="InstituteWebAPI\Repositories\Repository\" />
+    <Folder Include="Models\DTO\Sections\" />
+    <Folder Include="RozhnWebUI\Controllers\" />
   </ItemGroup>
 
 </Project>

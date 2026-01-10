@@ -1,0 +1,9 @@
+{
+  "solution": {
+    "path": "InstituteWebAPI.sln",
+    "projects": [
+      "..\\RozhnWebUI\\InstituteWebUI.csproj",
+      "InstituteWebAPI.csproj"
+    ]
+  }
+}

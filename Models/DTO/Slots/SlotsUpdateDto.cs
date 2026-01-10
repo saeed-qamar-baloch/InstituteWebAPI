@@ -1,8 +1,8 @@
-﻿namespace InstituteWebAPI.Models.DTO.Sections
+namespace InstituteWebAPI.Models.DTO.Slots
 {
-    public class SectionsUpdateDto
+    public class SlotsUpdateDto
     {
-        public string SectionName { get; set; }
+        public string SlotName { get; set; }
         public DateTime StartTime { get; set; }
         public DateTime EndTime { get; set; }
         public Guid CourseID { get; set; }

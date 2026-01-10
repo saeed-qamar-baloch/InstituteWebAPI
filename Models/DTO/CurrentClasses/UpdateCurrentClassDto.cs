@@ -6,6 +6,8 @@ namespace InstituteWebAPI.Models.DTO.CurrentClasses
     {
         [Required]
         public Guid ClassID { get; set; }
+
+        public Guid? SlotID { get; set; }
         public Guid? SectionID { get; set; }
         public Guid? TeacherID { get; set; }
         public Guid? SessionID { get; set; }

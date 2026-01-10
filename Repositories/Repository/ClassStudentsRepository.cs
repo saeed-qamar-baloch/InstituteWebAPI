@@ -36,6 +36,11 @@ namespace InstituteWebAPI.Repositories.Repository
             return await dbContext.ClassStudents
                 .Include(cs => cs.Student)
                 .Include(cs => cs.CurrentClass)
+                    .ThenInclude(cc => cc.Class)
+                .Include(cs => cs.CurrentClass)
+                    .ThenInclude(cc => cc.Slot)
+                .Include(cs => cs.CurrentClass)
+                    .ThenInclude(cc => cc.Teacher)
                 .ToListAsync();
         }
 
@@ -44,6 +49,11 @@ namespace InstituteWebAPI.Repositories.Repository
             return await dbContext.ClassStudents
                 .Include(cs => cs.Student)
                 .Include(cs => cs.CurrentClass)
+                    .ThenInclude(cc => cc.Class)
+                .Include(cs => cs.CurrentClass)
+                    .ThenInclude(cc => cc.Slot)
+                .Include(cs => cs.CurrentClass)
+                    .ThenInclude(cc => cc.Teacher)
                 .FirstOrDefaultAsync(cs => cs.ClassStudentID == id);
         }
 
@@ -59,9 +69,5 @@ namespace InstituteWebAPI.Repositories.Repository
             await dbContext.SaveChangesAsync();
             return existing;
         }
-
-
-
-
     }
 }

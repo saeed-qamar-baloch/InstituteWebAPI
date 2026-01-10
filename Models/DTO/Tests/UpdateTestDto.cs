@@ -5,6 +5,9 @@ namespace InstituteWebAPI.Models.DTO.Tests
     public class UpdateTestDto
     {
         [Required]
+        public Guid TermMonthID { get; set; }
+
+        [Required]
         public string TestType { get; set; }
         [Required]
         public float TotalMarks { get; set; }

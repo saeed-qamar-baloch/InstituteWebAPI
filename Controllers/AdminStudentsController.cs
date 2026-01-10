@@ -5,6 +5,7 @@ using InstituteWebAPI.Repositories.IRepository;
 using InstituteWebAPI.Repositories.Repository;
 using InstituteWebApp.Models.Domain;
 using Microsoft.AspNetCore.Mvc;
+using System.Net.Http;
 
 namespace InstituteWebAPI.Controllers
 {
@@ -30,6 +31,9 @@ namespace InstituteWebAPI.Controllers
         }
 
         [HttpGet("{id:Guid}")]
+
+
+      
         public async Task<IActionResult> GetById(Guid id)
         {
             var student = await studentRepository.GetByIdAsync(id);

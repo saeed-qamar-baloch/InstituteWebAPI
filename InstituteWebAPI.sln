@@ -5,7 +5,7 @@ VisualStudioVersion = 17.10.35013.160
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "InstituteWebAPI", "InstituteWebAPI.csproj", "{9EEFE33E-2A28-4BC7-B7C3-8C306FE1DD81}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "InstituteWebUI", "..\InstituteWebUI\InstituteWebUI.csproj", "{BD21F0A5-8342-455B-8A38-6049CB5BAFE3}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "InstituteWebUI", "..\RozhnWebUI\InstituteWebUI.csproj", "{5074512E-1699-8241-6915-37F7B5F6323A}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -17,10 +17,10 @@ Global
 		{9EEFE33E-2A28-4BC7-B7C3-8C306FE1DD81}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{9EEFE33E-2A28-4BC7-B7C3-8C306FE1DD81}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{9EEFE33E-2A28-4BC7-B7C3-8C306FE1DD81}.Release|Any CPU.Build.0 = Release|Any CPU
-		{BD21F0A5-8342-455B-8A38-6049CB5BAFE3}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{BD21F0A5-8342-455B-8A38-6049CB5BAFE3}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{BD21F0A5-8342-455B-8A38-6049CB5BAFE3}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{BD21F0A5-8342-455B-8A38-6049CB5BAFE3}.Release|Any CPU.Build.0 = Release|Any CPU
+		{5074512E-1699-8241-6915-37F7B5F6323A}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{5074512E-1699-8241-6915-37F7B5F6323A}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{5074512E-1699-8241-6915-37F7B5F6323A}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{5074512E-1699-8241-6915-37F7B5F6323A}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

@@ -1,7 +1,6 @@
 ﻿using InstituteWebAPI.Repositories.IRepository;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.IdentityModel.Tokens;
-using Microsoft.VisualBasic;
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Text;
@@ -19,10 +18,12 @@ namespace InstituteWebAPI.Repositories.Repository
 
         public string CreateJWTToken(IdentityUser user, List<string> roles)
         {
-            //create claims 
-
-            var claims = new List<Claim>();
-            claims.Add(new Claim(ClaimTypes.Email, user.Email));
+            // create claims
+            var claims = new List<Claim>
+            {
+                new Claim(ClaimTypes.NameIdentifier, user.Id),
+                new Claim(ClaimTypes.Email, user.Email ?? string.Empty)
+            };
 
             foreach (var role in roles)
             {
@@ -33,15 +34,15 @@ namespace InstituteWebAPI.Repositories.Repository
 
             var credentials = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
 
-            var token = new JwtSecurityToken(configuration["Jwt:Issuer"], configuration["Jwt:Audience"],claims, expires:DateTime.Now.AddMinutes(15),
-                signingCredentials:credentials
-                );
-
+            var token = new JwtSecurityToken(
+                configuration["Jwt:Issuer"],
+                configuration["Jwt:Audience"],
+                claims,
+                expires: DateTime.UtcNow.AddMinutes(15),
+                signingCredentials: credentials
+            );
 
             return new JwtSecurityTokenHandler().WriteToken(token);
-
-
-
         }
     }
 }

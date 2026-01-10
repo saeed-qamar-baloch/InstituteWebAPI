@@ -9,5 +9,7 @@ namespace InstituteWebAPI.Models.DTO.TeacherCourse
         [Required]
         public Guid CourseID { get; set; }
         public bool CourseIsTaken { get; set; }
+        public DateTime? FromDate { get; set; }
+        public DateTime? ToDate { get; set; }
     }
 }

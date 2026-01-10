@@ -17,7 +17,20 @@ namespace InstituteWebAPI.Repositories.Repository
         public async Task<Admissions> AddAsync(Admissions admission)
         {
             admission.CreatedAt = DateTime.Now;
-            
+            admission.ModifiedAt = DateTime.Now;
+
+            // Only one active admission per student per course
+            if (admission.IsActive)
+            {
+                var alreadyActive = await dbContext.Admissions
+                    .AnyAsync(a => a.StudentID == admission.StudentID && a.CourseID == admission.CourseID && a.IsActive);
+
+                if (alreadyActive)
+                {
+                    throw new InvalidOperationException("Student already has an active admission in this course");
+                }
+            }
+
             await dbContext.Admissions.AddAsync(admission);
             await dbContext.SaveChangesAsync();
             return admission;
@@ -53,6 +66,18 @@ namespace InstituteWebAPI.Repositories.Repository
         {
             var existing = await dbContext.Admissions.FindAsync(id);
             if (existing == null) return null;
+
+            // If we are setting this admission active, ensure no other active admission exists
+            if (admission.IsActive)
+            {
+                var alreadyActive = await dbContext.Admissions
+                    .AnyAsync(a => a.AdmissionID != id && a.StudentID == existing.StudentID && a.CourseID == admission.CourseID && a.IsActive);
+
+                if (alreadyActive)
+                {
+                    throw new InvalidOperationException("Student already has an active admission in this course");
+                }
+            }
 
             existing.RegistrationDate = admission.RegistrationDate;
             existing.LeavingDate = admission.LeavingDate;

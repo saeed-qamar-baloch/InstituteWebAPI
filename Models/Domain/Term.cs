@@ -14,7 +14,6 @@ namespace InstituteWebApp.Models.Domain
         public List<CurrentClass> CurrentClasses { get; set; }
         public List<Tests> Tests { get; set; }
         public List<StudentMarks> StudentMarks { get; set; }
-        public List<Sections> Sections { get; set; }
-
+        public List<Slots> Slots { get; set; }
     }
 }

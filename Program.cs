@@ -2,14 +2,13 @@ using InstituteWebAPI.Data;
 using InstituteWebAPI.Mappings;
 using InstituteWebAPI.Repositories.IRepository;
 using InstituteWebAPI.Repositories.Repository;
-using InstituteWebApp.Models.Domain;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
-using Microsoft.IdentityModel.Tokens;
-using Microsoft.EntityFrameworkCore;
-using System.Text;
 using Microsoft.AspNetCore.Identity;
-using Microsoft.OpenApi.Models;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.FileProviders;
+using Microsoft.IdentityModel.Tokens;
+using Microsoft.OpenApi.Models;
+using System.Text;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -19,15 +18,16 @@ builder.Services.AddControllers();
 builder.Services.AddHttpContextAccessor();
 // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
 builder.Services.AddEndpointsApiExplorer();
-builder.Services.AddSwaggerGen(options=>
+builder.Services.AddSwaggerGen(options =>
 {
     options.SwaggerDoc("v1", new OpenApiInfo
     {
-        Title ="Rozhn Institute API", Version="v1"
+        Title = "Rozhn Institute API",
+        Version = "v1"
     });
     options.AddSecurityDefinition(JwtBearerDefaults.AuthenticationScheme, new Microsoft.OpenApi.Models.OpenApiSecurityScheme
     {
-        Name ="Authorization",
+        Name = "Authorization",
         In = ParameterLocation.Header,
         Type = SecuritySchemeType.ApiKey,
         Scheme = JwtBearerDefaults.AuthenticationScheme
@@ -55,21 +55,24 @@ builder.Services.AddSwaggerGen(options=>
 builder.Services.AddDbContext<RozhnInstituteDbContext>(options => options.UseSqlServer(builder.Configuration.GetConnectionString("RozhnWebConnectionString")));
 
 builder.Services.AddDbContext<RozhnInstituteAuthDbContext>(options => options.UseSqlServer(builder.Configuration.GetConnectionString("RozhnWebAuthConnectionString")));
+
 builder.Services.AddScoped<ITermRepository, TermRepository>();
 builder.Services.AddScoped<ITermMonthsRepository, TermMonthsRepository>();
 builder.Services.AddScoped<ICoursesRepository, CoursesRepository>();
 builder.Services.AddScoped<IVillageRepository, VillageRepository>();
 builder.Services.AddScoped<IClassesRepository, ClassesRepository>();
-builder.Services.AddScoped<ISectionsRepository, SectionsRepository>();
+builder.Services.AddScoped<ISlotsRepository, SlotsRepository>();
+builder.Services.AddScoped<ISectionRepository, SectionRepository>();
 builder.Services.AddScoped<ISessionRepository, SessionRepository>();
 builder.Services.AddScoped<ITeacherRepository, TeacherRepository>();
 builder.Services.AddScoped<ITeacherCoursesRepository, TeacherCoursesRepository>();
 builder.Services.AddScoped<IStudentRepository, StudentRepository>();
 builder.Services.AddScoped<IAdmissionsRepository, AdmissionsRepository>();
 builder.Services.AddScoped<ICurrentClassRepository, CurrentClassRepository>();
-builder.Services.AddScoped< ITestsRepository, TestsRepository>();
+builder.Services.AddScoped<ITestsRepository, TestsRepository>();
 builder.Services.AddScoped<IStudentMarksRepository, StudentMarksRepository>();
 builder.Services.AddScoped<IClassStudentsRepository, ClassStudentsRepository>();
+builder.Services.AddScoped<ITeacherIdentityLinkRepository, TeacherIdentityLinkRepository>();
 
 
 builder.Services.AddScoped<ITokenRepository, TokenRepository>();
@@ -79,7 +82,11 @@ builder.Services.AddAutoMapper(typeof(AutoMapperProfiles));
 
 
 
-builder.Services.AddIdentityCore<IdentityUser>().AddRoles<IdentityRole>().AddTokenProvider<DataProtectorTokenProvider<IdentityUser>>("RozhnInstitute").AddEntityFrameworkStores<RozhnInstituteAuthDbContext>().AddDefaultTokenProviders();
+builder.Services.AddIdentityCore<IdentityUser>()
+    .AddRoles<IdentityRole>()
+    .AddTokenProvider<DataProtectorTokenProvider<IdentityUser>>("RozhnInstitute")
+    .AddEntityFrameworkStores<RozhnInstituteAuthDbContext>()
+    .AddDefaultTokenProviders();
 
 builder.Services.Configure<IdentityOptions>(options =>
 {
@@ -102,7 +109,11 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme).AddJw
     ValidAudience = builder.Configuration["Jwt:Audience"],
     IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(builder.Configuration["Jwt:Key"]))
 });
+
 var app = builder.Build();
+
+// Seed roles + default admin user
+await AuthDbSeeder.SeedAsync(app.Services);
 
 // Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())
@@ -120,9 +131,9 @@ app.UseStaticFiles(
     new StaticFileOptions
     {
         FileProvider = new PhysicalFileProvider(Path.Combine(Directory.GetCurrentDirectory(), "Images")),
-        RequestPath= "/images"
+        RequestPath = "/images"
     }
-    
+
     );
 
 app.MapControllers();

@@ -35,6 +35,7 @@ namespace InstituteWebAPI.Repositories.Repository
         {
             return await dbContext.CurrentClasses
                 .Include(cc => cc.Class)
+                .Include(cc => cc.Slot)
                 .Include(cc => cc.Section)
                 .Include(cc => cc.Teacher)
                 .Include(cc => cc.Session)
@@ -46,6 +47,7 @@ namespace InstituteWebAPI.Repositories.Repository
         {
             return await dbContext.CurrentClasses
                 .Include(cc => cc.Class)
+                .Include(cc => cc.Slot)
                 .Include(cc => cc.Section)
                 .Include(cc => cc.Teacher)
                 .Include(cc => cc.Session)
@@ -59,6 +61,7 @@ namespace InstituteWebAPI.Repositories.Repository
             if (existing == null) return null;
 
             existing.ClassID = currentClass.ClassID;
+            existing.SlotID = currentClass.SlotID;
             existing.SectionID = currentClass.SectionID;
             existing.TeacherID = currentClass.TeacherID;
             existing.SessionID = currentClass.SessionID;
@@ -69,17 +72,18 @@ namespace InstituteWebAPI.Repositories.Repository
             return existing;
         }
 
-        public async Task<List<CurrentClass>> SearchCurrentClassesAsync(Guid? classID, Guid? sectionID, Guid? teacherID, Guid? sessionID, Guid? termID, bool? isActive)
+        public async Task<List<CurrentClass>> SearchCurrentClassesAsync(Guid? classID, Guid? slotID, Guid? teacherID, Guid? sessionID, Guid? termID, bool? isActive)
         {
             return await dbContext.CurrentClasses
                 .Include(cc => cc.Class)
+                .Include(cc => cc.Slot)
                 .Include(cc => cc.Section)
                 .Include(cc => cc.Teacher)
                 .Include(cc => cc.Session)
                 .Include(cc => cc.Term)
                 .Where(cc =>
                     (classID == null || cc.ClassID == classID) &&
-                    (sectionID == null || cc.SectionID == sectionID) &&
+                    (slotID == null || cc.SlotID == slotID) &&
                     (teacherID == null || cc.TeacherID == teacherID) &&
                     (sessionID == null || cc.SessionID == sessionID) &&
                     (termID == null || cc.TermID == termID) &&

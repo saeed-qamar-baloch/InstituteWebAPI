@@ -12,9 +12,14 @@ namespace InstituteWebApp.Models.Domain
         [ForeignKey("ClassID")]
         public Classes Class { get; set; }
 
+        public Guid? SlotID { get; set; }
+        [ForeignKey("SlotID")]
+        public Slots? Slot { get; set; }
+
         public Guid? SectionID { get; set; }
         [ForeignKey("SectionID")]
-        public Sections? Section { get; set; }
+        public Section? Section { get; set; }
+
         public Guid? TeacherID { get; set; }
         [ForeignKey("TeacherID")]
         public Teachers? Teacher { get; set; }

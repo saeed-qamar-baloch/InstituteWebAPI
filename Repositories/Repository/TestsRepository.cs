@@ -37,7 +37,7 @@ namespace InstituteWebAPI.Repositories.Repository
             return await dbContext.Tests
                 .Include(t => t.TermMonth)
                 .Include(t => t.CurrentClass)
-            .ToListAsync();
+                .ToListAsync();
         }
 
         public async Task<Tests?> GetAsync(Guid id)
@@ -55,6 +55,7 @@ namespace InstituteWebAPI.Repositories.Repository
 
             existing.TestType = test.TestType;
             existing.TotalMarks = test.TotalMarks;
+            existing.TermMonthID = test.TermMonthID;
             existing.CurrentClassID = test.CurrentClassID;
 
             await dbContext.SaveChangesAsync();
