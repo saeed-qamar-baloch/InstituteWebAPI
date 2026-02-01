@@ -8,7 +8,16 @@ namespace InstituteWebApp.Models.Domain
 
         [Key]
         public Guid StudentMarkID { get; set; }
-        public float ObtainedMarks{ get; set; }
+
+        // Per-test obtained marks
+        public float ObtainedMarks { get; set; }
+
+        // Denormalized per-test totals (copied from `Tests.TotalMarks` at save-time)
+        public float TotalMarks { get; set; }
+
+        // Denormalized per-test percentage (ObtainedMarks/TotalMarks*100)
+        public float Percentage { get; set; }
+
         public Guid TestID { get; set; }
         [ForeignKey("TestID")]
         public Tests Test { get; set; }

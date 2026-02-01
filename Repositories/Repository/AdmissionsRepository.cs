@@ -67,7 +67,7 @@ namespace InstituteWebAPI.Repositories.Repository
             var existing = await dbContext.Admissions.FindAsync(id);
             if (existing == null) return null;
 
-            // If we are setting this admission active, ensure no other active admission exists
+            // If we are setting this admission active, ensure no other active admission exists for the student in the same course
             if (admission.IsActive)
             {
                 var alreadyActive = await dbContext.Admissions

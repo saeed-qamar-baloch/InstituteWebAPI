@@ -19,11 +19,19 @@ namespace InstituteWebAPI.Controllers
 
         private readonly UserManager<IdentityUser> userManager;
         private readonly ITokenRepository tokenRepository;
+        private readonly ITeacherRepository teacherRepository;
+        private readonly ITeacherIdentityLinkRepository teacherIdentityLinkRepository;
 
-        public AuthController(UserManager<IdentityUser> userManager, ITokenRepository tokenRepository)
+        public AuthController(
+            UserManager<IdentityUser> userManager,
+            ITokenRepository tokenRepository,
+            ITeacherRepository teacherRepository,
+            ITeacherIdentityLinkRepository teacherIdentityLinkRepository)
         {
             this.userManager = userManager;
             this.tokenRepository = tokenRepository;
+            this.teacherRepository = teacherRepository;
+            this.teacherIdentityLinkRepository = teacherIdentityLinkRepository;
         }
 
         // POST /api/Auth/Register
@@ -72,6 +80,55 @@ namespace InstituteWebAPI.Controllers
             }
 
             return BadRequest($"Something went wrong: {string.Join(", ", identityResult.Errors.Select(e => e.Description))}");
+        }
+
+        // POST /api/Auth/RegisterTeacher
+        // Admin creates credentials for an existing teacher.
+        // Links Teachers.RegistrationNo to IdentityUser.Id (user id) so teacher ownership checks work.
+        [HttpPost]
+        [Route("RegisterTeacher")]
+        [Authorize(Roles = "Admin")]
+        public async Task<IActionResult> RegisterTeacher([FromBody] RegisterTeacherCredentialDto dto)
+        {
+            if (!ModelState.IsValid)
+            {
+                return BadRequest(ModelState);
+            }
+
+            var teacher = await teacherRepository.GetByIdAsync(dto.TeacherID);
+            if (teacher == null)
+            {
+                return NotFound("Teacher not found.");
+            }
+
+            var existingUser = await userManager.FindByEmailAsync(dto.Email);
+            if (existingUser != null)
+            {
+                return BadRequest("A user with this email already exists.");
+            }
+
+            var identityUser = new IdentityUser
+            {
+                UserName = dto.Email,
+                Email = dto.Email
+            };
+
+            var createResult = await userManager.CreateAsync(identityUser, dto.Password);
+            if (!createResult.Succeeded)
+            {
+                return BadRequest(string.Join(", ", createResult.Errors.Select(e => e.Description)));
+            }
+
+            var addRoleResult = await userManager.AddToRoleAsync(identityUser, "Teacher");
+            if (!addRoleResult.Succeeded)
+            {
+                return BadRequest("Failed to assign Teacher role.");
+            }
+
+            // Link teacher with identity user id for authorization scoping
+            await teacherIdentityLinkRepository.LinkTeacherToUserIdAsync(teacher.TeacherID, identityUser.Id);
+
+            return Ok("Teacher credentials created successfully.");
         }
 
         [HttpPost]

@@ -9,6 +9,8 @@ using Microsoft.Extensions.FileProviders;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
 using System.Text;
+using InstituteWebAPI.Services.TermContext;
+using InstituteWebAPI.Services.StudentMonthlyResults;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -73,6 +75,8 @@ builder.Services.AddScoped<ITestsRepository, TestsRepository>();
 builder.Services.AddScoped<IStudentMarksRepository, StudentMarksRepository>();
 builder.Services.AddScoped<IClassStudentsRepository, ClassStudentsRepository>();
 builder.Services.AddScoped<ITeacherIdentityLinkRepository, TeacherIdentityLinkRepository>();
+builder.Services.AddScoped<ITermContext, TermContext>();
+builder.Services.AddScoped<IStudentMonthlyResultService, StudentMonthlyResultService>();
 
 
 builder.Services.AddScoped<ITokenRepository, TokenRepository>();

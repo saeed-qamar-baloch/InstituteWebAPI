@@ -15,17 +15,22 @@ namespace InstituteWebAPI.Repositories.Repository
 
         public async Task<Guid?> GetTeacherIdForUserIdAsync(string userId)
         {
-            // NOTE:
-            // The domain model `Teachers` currently has no Email/UserId column.
-            // This method therefore provides a best-effort lookup.
-            // If you add a dedicated column later (e.g. Teachers.IdentityUserId), replace this.
-
-            // Fallback: treat RegistrationNo as identity user id (only if your data was stored that way).
+            // The requirement is: teacher RegNo is linked with identity.
+            // Here we treat Teachers.RegistrationNo as the IdentityUser.Id (string).
             return await dbContext.Teachers
                 .AsNoTracking()
                 .Where(t => t.RegistrationNo == userId)
                 .Select(t => (Guid?)t.TeacherID)
                 .FirstOrDefaultAsync();
+        }
+
+        public async Task LinkTeacherToUserIdAsync(Guid teacherId, string userId)
+        {
+            var teacher = await dbContext.Teachers.FirstOrDefaultAsync(t => t.TeacherID == teacherId);
+            if (teacher == null) throw new InvalidOperationException("Teacher not found");
+
+            teacher.RegistrationNo = userId;
+            await dbContext.SaveChangesAsync();
         }
     }
 }

@@ -10,5 +10,6 @@ namespace InstituteWebAPI.Repositories.IRepository
         Task<Term?> UpdateAsync(Guid termID,Term term);
         Task<List<Term>> GetAllAsync();
         Task<Term?> GetTermByNameAsync(string TermName);
+        Task<Term?> GetActiveAsync();
     }
 }

@@ -4,6 +4,7 @@ using InstituteWebAPI.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -11,9 +12,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace InstituteWebAPI.Migrations
 {
     [DbContext(typeof(RozhnInstituteDbContext))]
-    partial class RozhnInstituteDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260116071200_AddStudentMonthlyResultsTable")]
+    partial class AddStudentMonthlyResultsTable
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -251,47 +254,6 @@ namespace InstituteWebAPI.Migrations
                     b.ToTable("Slots");
                 });
 
-            modelBuilder.Entity("InstituteWebApp.Models.Domain.StudentAttendance", b =>
-                {
-                    b.Property<Guid>("StudentAttendanceID")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uniqueidentifier");
-
-                    b.Property<DateTime>("AttendanceDate")
-                        .HasColumnType("datetime2");
-
-                    b.Property<DateTime>("CreatedOn")
-                        .HasColumnType("datetime2");
-
-                    b.Property<Guid>("CurrentClassID")
-                        .HasColumnType("uniqueidentifier");
-
-                    b.Property<Guid>("MarkedByTeacherID")
-                        .HasColumnType("uniqueidentifier");
-
-                    b.Property<int>("Status")
-                        .HasColumnType("int");
-
-                    b.Property<Guid>("StudentID")
-                        .HasColumnType("uniqueidentifier");
-
-                    b.Property<DateTime?>("UpdatedOn")
-                        .HasColumnType("datetime2");
-
-                    b.HasKey("StudentAttendanceID");
-
-                    b.HasIndex("CurrentClassID");
-
-                    b.HasIndex("MarkedByTeacherID");
-
-                    b.HasIndex("StudentID");
-
-                    b.HasIndex("AttendanceDate", "CurrentClassID", "StudentID")
-                        .IsUnique();
-
-                    b.ToTable("StudentAttendances");
-                });
-
             modelBuilder.Entity("InstituteWebApp.Models.Domain.StudentMarks", b =>
                 {
                     b.Property<Guid>("StudentMarkID")
@@ -299,9 +261,6 @@ namespace InstituteWebAPI.Migrations
                         .HasColumnType("uniqueidentifier");
 
                     b.Property<float>("ObtainedMarks")
-                        .HasColumnType("real");
-
-                    b.Property<float>("Percentage")
                         .HasColumnType("real");
 
                     b.Property<Guid>("StudentID")
@@ -312,9 +271,6 @@ namespace InstituteWebAPI.Migrations
 
                     b.Property<Guid>("TestID")
                         .HasColumnType("uniqueidentifier");
-
-                    b.Property<float>("TotalMarks")
-                        .HasColumnType("real");
 
                     b.HasKey("StudentMarkID");
 
@@ -669,23 +625,11 @@ namespace InstituteWebAPI.Migrations
                     b.Property<Guid>("Month3TestID")
                         .HasColumnType("uniqueidentifier");
 
-                    b.Property<float>("Percentage")
-                        .HasColumnType("real");
-
-                    b.Property<string>("Result")
-                        .HasColumnType("nvarchar(max)");
-
                     b.Property<Guid>("StudentID")
                         .HasColumnType("uniqueidentifier");
 
                     b.Property<Guid>("TermID")
                         .HasColumnType("uniqueidentifier");
-
-                    b.Property<float>("TotalMarksConsidered")
-                        .HasColumnType("real");
-
-                    b.Property<float>("TotalObtained")
-                        .HasColumnType("real");
 
                     b.Property<DateTime?>("UpdatedOn")
                         .HasColumnType("datetime2");
@@ -696,8 +640,7 @@ namespace InstituteWebAPI.Migrations
 
                     b.HasIndex("StudentID");
 
-                    b.HasIndex("TermID", "CurrentClassID", "StudentID")
-                        .IsUnique();
+                    b.HasIndex("TermID");
 
                     b.ToTable("TerminalResults");
                 });
@@ -861,33 +804,6 @@ namespace InstituteWebAPI.Migrations
                     b.Navigation("Session");
 
                     b.Navigation("Term");
-                });
-
-            modelBuilder.Entity("InstituteWebApp.Models.Domain.StudentAttendance", b =>
-                {
-                    b.HasOne("InstituteWebApp.Models.Domain.CurrentClass", "CurrentClass")
-                        .WithMany()
-                        .HasForeignKey("CurrentClassID")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.HasOne("InstituteWebApp.Models.Domain.Teachers", "MarkedByTeacher")
-                        .WithMany()
-                        .HasForeignKey("MarkedByTeacherID")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.HasOne("InstituteWebApp.Models.Domain.Students", "Student")
-                        .WithMany()
-                        .HasForeignKey("StudentID")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("CurrentClass");
-
-                    b.Navigation("MarkedByTeacher");
-
-                    b.Navigation("Student");
                 });
 
             modelBuilder.Entity("InstituteWebApp.Models.Domain.StudentMarks", b =>

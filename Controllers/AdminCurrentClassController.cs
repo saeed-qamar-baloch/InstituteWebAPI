@@ -1,6 +1,7 @@
 ﻿using AutoMapper;
 using InstituteWebAPI.Models.DTO.CurrentClasses;
 using InstituteWebAPI.Repositories.IRepository;
+using InstituteWebAPI.Services.TermContext;
 using InstituteWebApp.Models.Domain;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -14,12 +15,14 @@ namespace InstituteWebAPI.Controllers
     {
         private readonly ICurrentClassRepository repository;
         private readonly ITeacherIdentityLinkRepository teacherIdentity;
+        private readonly ITermContext termContext;
         private readonly IMapper mapper;
 
-        public AdminCurrentClassController(ICurrentClassRepository repository, ITeacherIdentityLinkRepository teacherIdentity, IMapper mapper)
+        public AdminCurrentClassController(ICurrentClassRepository repository, ITeacherIdentityLinkRepository teacherIdentity, ITermContext termContext, IMapper mapper)
         {
             this.repository = repository;
             this.teacherIdentity = teacherIdentity;
+            this.termContext = termContext;
             this.mapper = mapper;
         }
 
@@ -34,17 +37,19 @@ namespace InstituteWebAPI.Controllers
         [Authorize(Roles = "Admin,Teacher")]
         public async Task<IActionResult> GetAll()
         {
+            var activeTerm = await termContext.GetActiveTermAsync();
+
             // Teacher can only see their own assigned classes
             if (User.IsInRole("Teacher"))
             {
                 var teacherId = await GetTeacherIdFromTokenAsync();
                 if (teacherId == null) return Forbid();
 
-                var result = await repository.SearchCurrentClassesAsync(null, null, teacherId.Value, null, null, null);
+                var result = await repository.SearchCurrentClassesAsync(null, null, teacherId.Value, null, activeTerm.TermID, null);
                 return Ok(mapper.Map<List<CurrentClassDto>>(result));
             }
 
-            var currentClasses = await repository.GetAllAsync();
+            var currentClasses = await repository.SearchCurrentClassesAsync(null, null, null, null, activeTerm.TermID, null);
             return Ok(mapper.Map<List<CurrentClassDto>>(currentClasses));
         }
 
@@ -54,6 +59,12 @@ namespace InstituteWebAPI.Controllers
         {
             var currentClass = await repository.GetAsync(id);
             if (currentClass == null) return NotFound();
+
+            var activeTerm = await termContext.GetActiveTermAsync();
+            if (currentClass.TermID != activeTerm.TermID)
+            {
+                return Forbid();
+            }
 
             if (User.IsInRole("Teacher"))
             {
@@ -73,9 +84,14 @@ namespace InstituteWebAPI.Controllers
         [Authorize(Roles = "Admin")]
         public async Task<IActionResult> Create(AddCurrentClassDto dto)
         {
+            var activeTerm = await termContext.GetActiveTermAsync();
+
             var currentClass = mapper.Map<CurrentClass>(dto);
             currentClass.CreatedOn = DateTime.UtcNow;
             currentClass.IsActive = true;
+
+            // Force active term
+            currentClass.TermID = activeTerm.TermID;
 
             currentClass = await repository.AddAsync(currentClass);
             return Ok(mapper.Map<CurrentClassDto>(currentClass));
@@ -85,7 +101,20 @@ namespace InstituteWebAPI.Controllers
         [Authorize(Roles = "Admin")]
         public async Task<IActionResult> Update(Guid id, UpdateCurrentClassDto dto)
         {
+            var existing = await repository.GetAsync(id);
+            if (existing == null) return NotFound();
+
+            var activeTerm = await termContext.GetActiveTermAsync();
+            if (existing.TermID != activeTerm.TermID)
+            {
+                return BadRequest("You can only update classes in the active term.");
+            }
+
             var updated = mapper.Map<CurrentClass>(dto);
+
+            // Prevent moving records across terms
+            updated.TermID = activeTerm.TermID;
+
             updated = await repository.UpdateAsync(id, updated);
 
             if (updated == null) return NotFound();
@@ -96,6 +125,15 @@ namespace InstituteWebAPI.Controllers
         [Authorize(Roles = "Admin")]
         public async Task<IActionResult> Delete(Guid id)
         {
+            var existing = await repository.GetAsync(id);
+            if (existing == null) return NotFound();
+
+            var activeTerm = await termContext.GetActiveTermAsync();
+            if (existing.TermID != activeTerm.TermID)
+            {
+                return BadRequest("You can only delete classes in the active term.");
+            }
+
             var deleted = await repository.DeleteAsync(id);
             if (deleted == null) return NotFound();
             return Ok(mapper.Map<CurrentClassDto>(deleted));
@@ -105,6 +143,11 @@ namespace InstituteWebAPI.Controllers
         [Authorize(Roles = "Admin,Teacher")]
         public async Task<IActionResult> Search([FromQuery] Guid? classID, [FromQuery] Guid? slotID, [FromQuery] Guid? teacherID, [FromQuery] Guid? sessionID, [FromQuery] Guid? termID, [FromQuery] bool? isActive)
         {
+            var activeTerm = await termContext.GetActiveTermAsync();
+
+            // Force active term regardless of what client sends
+            termID = activeTerm.TermID;
+
             if (User.IsInRole("Teacher"))
             {
                 var teacherIdFromToken = await GetTeacherIdFromTokenAsync();

@@ -36,7 +36,9 @@
     <Folder Include="InstituteWebAPI\Models\DTO\Slots\" />
     <Folder Include="InstituteWebAPI\Repositories\IRepository\" />
     <Folder Include="InstituteWebAPI\Repositories\Repository\" />
+    <Folder Include="Models\DTO\PassingMarks\" />
     <Folder Include="Models\DTO\Sections\" />
+    <Folder Include="Models\DTO\StudentMarks\TerminalSettings\" />
     <Folder Include="RozhnWebUI\Controllers\" />
   </ItemGroup>
 

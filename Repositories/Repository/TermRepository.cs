@@ -63,6 +63,10 @@ namespace InstituteWebAPI.Repositories.Repository
             return await _dbContext.Term.FirstOrDefaultAsync(t => t.TermName.Contains(TermName));
         }
 
+        public async Task<Term?> GetActiveAsync()
+        {
+            return await _dbContext.Term.AsNoTracking().FirstOrDefaultAsync(t => t.IsActive);
+        }
 
         public async Task<Term?> UpdateAsync(Guid termID, Term term)
         {
