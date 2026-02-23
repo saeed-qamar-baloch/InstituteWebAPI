@@ -6,5 +6,7 @@ namespace InstituteWebAPI.Models.DTO.Section
     {
         [Required]
         public string Name { get; set; }
+
+        public Guid? TermID { get; set; }
     }
 }

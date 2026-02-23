@@ -11,6 +11,9 @@ namespace InstituteWebAPI.Models.DTO.Admissions
         [Required]
         public Guid CourseID { get; set; }
         public DateTime LeavingDate { get; set; }
+        // Monthly fee (decimal) and due date as day-of-month (1-31)
+        public decimal MonthlyFee { get; set; }
+        public int? DueDate { get; set; }
         public string Status { get; set; }
         public bool IsActive { get; set; }
     }

@@ -15,6 +15,12 @@ namespace InstituteWebApp.Models.Domain
         [ForeignKey("CourseID")]
         public Courses Course { get; set; }
         public DateTime? LeavingDate { get; set; }
+        // Monthly fee for the admission
+        [Column(TypeName = "decimal(18,2)")]
+        public decimal MonthlyFee { get; set; }
+
+        // Optional due date for the monthly fee as day-of-month (1-31)
+        public int? DueDate { get; set; }
         public DateTime CreatedAt { get; set; }
         public DateTime ModifiedAt { get; set; }
         public string Status { get; set; }

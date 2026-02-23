@@ -4,6 +4,8 @@ using InstituteWebAPI.Models.DTO.Classes;
 using InstituteWebAPI.Models.DTO.ClassStudents;
 using InstituteWebAPI.Models.DTO.Courses;
 using InstituteWebAPI.Models.DTO.CurrentClasses;
+using InstituteWebAPI.Models.DTO.FeeManagement;
+using InstituteWebAPI.Models.DTO.FeeType;
 using InstituteWebAPI.Models.DTO.Section;
 using InstituteWebAPI.Models.DTO.Sessions;
 using InstituteWebAPI.Models.DTO.Slots;
@@ -70,6 +72,13 @@ namespace InstituteWebAPI.Mappings
             CreateMap<UpdateAdmissionDto, Admissions>();
             CreateMap<Admissions, AdmissionDto>();
 
+            CreateMap<AddFeeTypeDto, InstituteWebApp.Models.Domain.FeeType>().ReverseMap();
+            CreateMap<UpdateFeeTypeDto, InstituteWebApp.Models.Domain.FeeType>().ReverseMap();
+            CreateMap<InstituteWebApp.Models.Domain.FeeType, InstituteWebAPI.Models.DTO.FeeType.FeeTypeDto>().ReverseMap();
+            CreateMap<AddAdmissionDto, Admissions>().ReverseMap();
+            CreateMap<UpdateAdmissionDto, Admissions>().ReverseMap();
+            CreateMap<Admissions, AdmissionDto>().ReverseMap();
+
             CreateMap<AddTestDto, Tests>();
             CreateMap<UpdateTestDto, Tests>();
             CreateMap<Tests, TestDto>();
@@ -85,6 +94,20 @@ namespace InstituteWebAPI.Mappings
             CreateMap<AddClassStudentDto, ClassStudents>();
             CreateMap<UpdateClassStudentDto, ClassStudents>();
             CreateMap<ClassStudents, ClassStudentDto>();
+
+            CreateMap<FeeDue, FeeDueDto>()
+                .ForMember(d => d.FeeType, opt => opt.MapFrom(s => s.FeeType.ToString()))
+                .ForMember(d => d.Status, opt => opt.MapFrom(s => s.Status.ToString()))
+                .ForMember(d => d.TotalAmount, opt => opt.MapFrom(s => s.BaseAmount + (s.IsLateFeeWaived ? 0m : s.LateFeeAmount)))
+                .ForMember(d => d.PaidAmount, opt => opt.MapFrom(s => s.PaymentDetails.Sum(p => p.PaidAmount)))
+                .ForMember(d => d.RemainingAmount, opt => opt.MapFrom(s => (s.BaseAmount + (s.IsLateFeeWaived ? 0m : s.LateFeeAmount)) - s.PaymentDetails.Sum(p => p.PaidAmount)));
+            CreateMap<Payment, PaymentDto>();
+            CreateMap<PaymentDetail, PaymentDetailDto>();
+            CreateMap<Payment, PaymentSummaryDto>()
+                .ForMember(d => d.StudentId, opt => opt.MapFrom(s => s.StudentId))
+                .ForMember(d => d.RegistrationNo, opt => opt.MapFrom(s => s.Student.RegistrationNo))
+                .ForMember(d => d.StudentName, opt => opt.MapFrom(s => s.Student.StudentName))
+                .ForMember(d => d.FatherName, opt => opt.MapFrom(s => s.Student.FatherName));
         }
     }
 }

@@ -73,8 +73,7 @@ namespace InstituteWebAPI.Controllers
 
             if (created == null)
             {
-                // If the student already exists, return a BadRequest with an error message
-                return BadRequest(new { errors = new[] { "Student already exists with the same name or contact details." } });
+                return BadRequest(new { errors = new[] { "Student already exists with the same name, father name, and father contact or CNIC." } });
             }
             return Ok(mapper.Map<StudentDto>(created));
         }

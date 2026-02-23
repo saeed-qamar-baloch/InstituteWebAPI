@@ -90,16 +90,20 @@ namespace InstituteWebAPI.Repositories.Repository
 
         public async Task<Students> AddAsync(Students student)
         {
+            var studentName = student.StudentName?.Trim().ToLowerInvariant();
+            var fatherName = student.FatherName?.Trim().ToLowerInvariant();
+            var fatherContact = student.FatherContact?.Trim();
+            var fatherCnic = student.FatherCnic?.Trim();
 
-            bool StudentExists = _DbContext.Students.Any(x => (x.StudentName == student.StudentName && x.FatherContact == student.FatherContact || student.StudentContact == x.StudentContact)
-                || (x.StudentName == student.StudentName && x.FatherCnic == student.FatherCnic)
+            var studentExists = _DbContext.Students.Any(x =>
+                x.StudentName.ToLower() == studentName &&
+                x.FatherName.ToLower() == fatherName &&
+                ((fatherContact != null && x.FatherContact == fatherContact) ||
+                 (fatherCnic != null && x.FatherCnic == fatherCnic)));
 
-                );
-
-            if (StudentExists)
+            if (studentExists)
             {
                 return null;
-               
             }
 
 

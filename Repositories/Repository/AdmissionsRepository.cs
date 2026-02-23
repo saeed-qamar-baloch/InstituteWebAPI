@@ -81,6 +81,9 @@ namespace InstituteWebAPI.Repositories.Repository
 
             existing.RegistrationDate = admission.RegistrationDate;
             existing.LeavingDate = admission.LeavingDate;
+            // Persist monthly fee and due date
+            existing.MonthlyFee = admission.MonthlyFee;
+            existing.DueDate = admission.DueDate;
             existing.Status = admission.Status;
             existing.IsActive = admission.IsActive;
             existing.CourseID = admission.CourseID;

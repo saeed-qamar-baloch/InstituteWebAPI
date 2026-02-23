@@ -2,6 +2,7 @@ using InstituteWebAPI.Data;
 using InstituteWebAPI.Mappings;
 using InstituteWebAPI.Repositories.IRepository;
 using InstituteWebAPI.Repositories.Repository;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
@@ -11,12 +12,33 @@ using Microsoft.OpenApi.Models;
 using System.Text;
 using InstituteWebAPI.Services.TermContext;
 using InstituteWebAPI.Services.StudentMonthlyResults;
+using InstituteWebAPI.Services.FeeManagement;
+using InstituteWebAPI.Models.Configuration;
 
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
 
-builder.Services.AddControllers();
+builder.Services.AddControllers()
+    .ConfigureApiBehaviorOptions(options =>
+    {
+        options.InvalidModelStateResponseFactory = context =>
+        {
+            var errors = context.ModelState
+                .Where(entry => entry.Value?.Errors.Count > 0)
+                .SelectMany(entry => entry.Value!.Errors.Select(error =>
+                    string.IsNullOrWhiteSpace(error.ErrorMessage)
+                        ? $"The {entry.Key} field is invalid."
+                        : error.ErrorMessage))
+                .ToArray();
+
+            return new BadRequestObjectResult(new
+            {
+                Message = "Validation failed.",
+                Errors = errors
+            });
+        };
+    });
 builder.Services.AddHttpContextAccessor();
 // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
 builder.Services.AddEndpointsApiExplorer();
@@ -58,6 +80,8 @@ builder.Services.AddDbContext<RozhnInstituteDbContext>(options => options.UseSql
 
 builder.Services.AddDbContext<RozhnInstituteAuthDbContext>(options => options.UseSqlServer(builder.Configuration.GetConnectionString("RozhnWebAuthConnectionString")));
 
+builder.Services.Configure<FeeManagementOptions>(builder.Configuration.GetSection("FeeManagement"));
+
 builder.Services.AddScoped<ITermRepository, TermRepository>();
 builder.Services.AddScoped<ITermMonthsRepository, TermMonthsRepository>();
 builder.Services.AddScoped<ICoursesRepository, CoursesRepository>();
@@ -74,9 +98,12 @@ builder.Services.AddScoped<ICurrentClassRepository, CurrentClassRepository>();
 builder.Services.AddScoped<ITestsRepository, TestsRepository>();
 builder.Services.AddScoped<IStudentMarksRepository, StudentMarksRepository>();
 builder.Services.AddScoped<IClassStudentsRepository, ClassStudentsRepository>();
+builder.Services.AddScoped<IFeeTypeRepository, FeeTypeRepository>();
 builder.Services.AddScoped<ITeacherIdentityLinkRepository, TeacherIdentityLinkRepository>();
+builder.Services.AddScoped<IFeeManagementRepository, FeeManagementRepository>();
 builder.Services.AddScoped<ITermContext, TermContext>();
 builder.Services.AddScoped<IStudentMonthlyResultService, StudentMonthlyResultService>();
+builder.Services.AddScoped<IFeeManagementService, FeeManagementService>();
 
 
 builder.Services.AddScoped<ITokenRepository, TokenRepository>();

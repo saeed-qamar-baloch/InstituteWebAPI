@@ -33,12 +33,16 @@ namespace InstituteWebAPI.Repositories.Repository
 
         public async Task<List<Section>> GetAllAsync()
         {
-            return await dbContext.Sections.ToListAsync();
+            return await dbContext.Sections
+                .Include(s => s.Term)
+                .ToListAsync();
         }
 
         public async Task<Section?> GetAsync(Guid id)
         {
-            return await dbContext.Sections.FirstOrDefaultAsync(s => s.SectionID == id);
+            return await dbContext.Sections
+                .Include(s => s.Term)
+                .FirstOrDefaultAsync(s => s.SectionID == id);
         }
 
         public async Task<Section?> UpdateAsync(Guid id, Section section)

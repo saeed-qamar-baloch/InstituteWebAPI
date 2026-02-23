@@ -1,9 +1,11 @@
 using AutoMapper;
 using InstituteWebAPI.Models.DTO.Section;
 using InstituteWebAPI.Repositories.IRepository;
+using InstituteWebAPI.Services.TermContext;
 using InstituteWebApp.Models.Domain;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 
 namespace InstituteWebAPI.Controllers
 {
@@ -12,11 +14,13 @@ namespace InstituteWebAPI.Controllers
     public class AdminSectionController : ControllerBase
     {
         private readonly ISectionRepository repo;
+        private readonly ITermContext termContext;
         private readonly IMapper mapper;
 
-        public AdminSectionController(ISectionRepository repo, IMapper mapper)
+        public AdminSectionController(ISectionRepository repo, ITermContext termContext, IMapper mapper)
         {
             this.repo = repo;
+            this.termContext = termContext;
             this.mapper = mapper;
         }
 
@@ -24,7 +28,10 @@ namespace InstituteWebAPI.Controllers
         [Authorize(Roles = "Admin,Teacher")]
         public async Task<IActionResult> GetAll()
         {
-            var data = await repo.GetAllAsync();
+            var activeTerm = await termContext.GetActiveTermAsync();
+            var data = (await repo.GetAllAsync())
+                .Where(s => s.TermID == activeTerm.TermID)
+                .ToList();
             return Ok(mapper.Map<List<SectionDto>>(data));
         }
 
@@ -41,6 +48,8 @@ namespace InstituteWebAPI.Controllers
         [Authorize(Roles = "Admin")]
         public async Task<IActionResult> Create([FromBody] AddSectionDto dto)
         {
+            var activeTerm = await termContext.GetActiveTermAsync();
+            dto.TermID = activeTerm.TermID;
             var domain = mapper.Map<Section>(dto);
             domain = await repo.AddAsync(domain);
             return Ok(mapper.Map<SectionDto>(domain));
@@ -50,6 +59,8 @@ namespace InstituteWebAPI.Controllers
         [Authorize(Roles = "Admin")]
         public async Task<IActionResult> Update(Guid id, [FromBody] UpdateSectionDto dto)
         {
+            var activeTerm = await termContext.GetActiveTermAsync();
+            dto.TermID = activeTerm.TermID;
             var domain = mapper.Map<Section>(dto);
             var updated = await repo.UpdateAsync(id, domain);
             if (updated == null) return NotFound();

@@ -8,9 +8,21 @@ namespace InstituteWebAPI.CustomActionFilters
     {
         public override void OnActionExecuting(ActionExecutingContext context)
         {
-            if(context.ModelState.IsValid == false)
+            if (context.ModelState.IsValid == false)
             {
-                context.Result = new BadRequestResult();
+                var errors = context.ModelState
+                    .Where(entry => entry.Value?.Errors.Count > 0)
+                    .SelectMany(entry => entry.Value!.Errors.Select(error =>
+                        string.IsNullOrWhiteSpace(error.ErrorMessage)
+                            ? $"The {entry.Key} field is invalid."
+                            : error.ErrorMessage))
+                    .ToArray();
+
+                context.Result = new BadRequestObjectResult(new
+                {
+                    Message = "Validation failed.",
+                    Errors = errors
+                });
             }
         }
     }

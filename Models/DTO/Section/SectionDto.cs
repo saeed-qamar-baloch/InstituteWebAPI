@@ -4,5 +4,6 @@ namespace InstituteWebAPI.Models.DTO.Section
     {
         public Guid SectionID { get; set; }
         public string Name { get; set; }
+        public Guid? TermID { get; set; }
     }
 }

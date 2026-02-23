@@ -51,13 +51,6 @@ namespace InstituteWebAPI.Migrations.RozhnInstituteAuthDb
                     b.HasData(
                         new
                         {
-                            Id = "5d0033a8-20e7-4997-8f3b-5769ec3b040b",
-                            ConcurrencyStamp = "5d0033a8-20e7-4997-8f3b-5769ec3b040b",
-                            Name = "Parent",
-                            NormalizedName = "PARENT"
-                        },
-                        new
-                        {
                             Id = "f4969356-5492-442e-bbc2-d7128a5206ab",
                             ConcurrencyStamp = "f4969356-5492-442e-bbc2-d7128a5206ab",
                             Name = "Admin",
@@ -69,13 +62,6 @@ namespace InstituteWebAPI.Migrations.RozhnInstituteAuthDb
                             ConcurrencyStamp = "a551991f-c51c-4149-a7cd-3787b6d727e2",
                             Name = "Teacher",
                             NormalizedName = "TEACHER"
-                        },
-                        new
-                        {
-                            Id = "18ff3f63-158f-4a29-9963-e5a3db80cb51",
-                            ConcurrencyStamp = "18ff3f63-158f-4a29-9963-e5a3db80cb51",
-                            Name = "Student",
-                            NormalizedName = "STUDENT"
                         });
                 });
 

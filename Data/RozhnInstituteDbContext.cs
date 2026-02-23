@@ -30,7 +30,14 @@ namespace InstituteWebAPI.Data
 
         public DbSet<TerminalResult> TerminalResults { get; set; }
 
+        public DbSet<FeeType> FeeTypes { get; set; }
+
         public DbSet<StudentAttendance> StudentAttendances { get; set; }
+
+        public DbSet<FeeDue> FeeDues { get; set; }
+        public DbSet<Payment> Payments { get; set; }
+        public DbSet<PaymentDetail> PaymentDetails { get; set; }
+        public DbSet<FeeSettings> FeeSettings { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -47,6 +54,20 @@ namespace InstituteWebAPI.Data
             modelBuilder.Entity<StudentAttendance>()
                 .HasIndex(x => new { x.AttendanceDate, x.CurrentClassID, x.StudentID })
                 .IsUnique();
+
+            modelBuilder.Entity<FeeDue>()
+                .HasIndex(x => new { x.AdmissionId, x.FeeType, x.FeeMonth })
+                .IsUnique()
+                .HasFilter("[FeeMonth] IS NOT NULL");
+
+            modelBuilder.Entity<PaymentDetail>()
+                .HasIndex(x => x.FeeDueId);
+
+            modelBuilder.Entity<PaymentDetail>()
+                .HasOne(pd => pd.Payment)
+                .WithMany(p => p.PaymentDetails)
+                .HasForeignKey(pd => pd.PaymentId)
+                .OnDelete(DeleteBehavior.NoAction);
         }
     }
 }
