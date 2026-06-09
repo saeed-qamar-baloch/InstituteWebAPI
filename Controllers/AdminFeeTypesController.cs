@@ -8,6 +8,7 @@ namespace InstituteWebAPI.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
+    [Microsoft.AspNetCore.Authorization.Authorize(Roles = "Admin")]
     public class AdminFeeTypesController : ControllerBase
     {
         private readonly IFeeTypeRepository repository;

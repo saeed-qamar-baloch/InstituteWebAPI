@@ -47,6 +47,16 @@ namespace InstituteWebAPI.Repositories.Repository
                 .FirstOrDefaultAsync(tc => tc.TeacherCourseID == id);
         }
 
+        public async Task<List<TeacherCourses>> GetByTeacherAsync(Guid teacherId)
+        {
+            return await dbContext.TeacherCourses
+                .Include(tc => tc.Teacher)
+                .Include(tc => tc.Course)
+                .Where(tc => tc.TeacherID == teacherId)
+                .OrderByDescending(tc => tc.FromDate)
+                .ToListAsync();
+        }
+
         public async Task<TeacherCourses?> UpdateAsync(Guid id, TeacherCourses teacherCourse)
         {
             var existing = await dbContext.TeacherCourses.FindAsync(id);

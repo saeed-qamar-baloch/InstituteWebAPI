@@ -13,5 +13,6 @@ namespace InstituteWebAPI.Models.DTO.CurrentClasses
         public Guid? SessionID { get; set; }
         public Guid? TermID { get; set; }
         public bool IsActive { get; set; }
+        public string? Room { get; set; }
     }
 }

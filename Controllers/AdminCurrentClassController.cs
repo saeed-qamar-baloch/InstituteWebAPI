@@ -93,8 +93,15 @@ namespace InstituteWebAPI.Controllers
             // Force active term
             currentClass.TermID = activeTerm.TermID;
 
-            currentClass = await repository.AddAsync(currentClass);
-            return Ok(mapper.Map<CurrentClassDto>(currentClass));
+            try
+            {
+                currentClass = await repository.AddAsync(currentClass);
+                return Ok(mapper.Map<CurrentClassDto>(currentClass));
+            }
+            catch (InvalidOperationException ex)
+            {
+                return BadRequest(new { message = ex.Message });
+            }
         }
 
         [HttpPut("{id:Guid}")]
@@ -115,10 +122,16 @@ namespace InstituteWebAPI.Controllers
             // Prevent moving records across terms
             updated.TermID = activeTerm.TermID;
 
-            updated = await repository.UpdateAsync(id, updated);
-
-            if (updated == null) return NotFound();
-            return Ok(mapper.Map<CurrentClassDto>(updated));
+            try
+            {
+                updated = await repository.UpdateAsync(id, updated);
+                if (updated == null) return NotFound();
+                return Ok(mapper.Map<CurrentClassDto>(updated));
+            }
+            catch (InvalidOperationException ex)
+            {
+                return BadRequest(new { message = ex.Message });
+            }
         }
 
         [HttpDelete("{id:Guid}")]

@@ -4,13 +4,14 @@ using InstituteWebAPI.Models.DTO.Students;
 using InstituteWebAPI.Repositories.IRepository;
 using InstituteWebAPI.Repositories.Repository;
 using InstituteWebApp.Models.Domain;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using System.Net.Http;
 
 namespace InstituteWebAPI.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
+    [Authorize(Roles = "Admin")]
     public class AdminStudentsController : ControllerBase
     {
         private readonly IStudentRepository studentRepository;
@@ -58,14 +59,14 @@ namespace InstituteWebAPI.Controllers
         }
 
         [HttpPost]
-        public async Task<IActionResult> Add([FromForm]AddStudentDto dto)
+        public async Task<IActionResult> Add([FromForm] AddStudentDto dto, [FromForm] IFormFile? file)
         {
             
             var domain = mapper.Map<Students>(dto);
             domain.CreatedAt = DateTime.Now;
             domain.ModifiedAt = DateTime.Now;
 
-            domain.file = dto.file;
+            domain.file = file;
           
            
 
@@ -79,12 +80,13 @@ namespace InstituteWebAPI.Controllers
         }
 
         [HttpPut("{id:Guid}")]
-        public async Task<IActionResult> Update(Guid id, UpdateStudentDto dto)
+        public async Task<IActionResult> Update([FromRoute] Guid id, [FromForm] UpdateStudentDto dto)
         {
-            var updated = await studentRepository.UpdateAsync(id, mapper.Map<Students>(dto));
-            if (updated == null) return NotFound();
+            var domain = mapper.Map<Students>(dto);
+            domain.file = dto.file;   // must be set BEFORE repository call so photo gets saved
 
-            updated.file = dto.file;
+            var updated = await studentRepository.UpdateAsync(id, domain);
+            if (updated == null) return NotFound();
 
             return Ok(mapper.Map<StudentDto>(updated));
         }
@@ -130,6 +132,26 @@ namespace InstituteWebAPI.Controllers
             if (student == null) return NotFound();
 
             return Ok(mapper.Map<StudentDto>(student));
+        }
+
+        /// <summary>
+        /// Combined picker search: matches name, registration number, or father name.
+        /// Used by the Admissions form student-picker dropdown.
+        /// </summary>
+        [HttpGet("search")]
+        public async Task<IActionResult> Search([FromQuery] string q = "")
+        {
+            var students = await studentRepository.GetAllAsync(null, null, "studentName", true, 1, 200);
+            if (!string.IsNullOrWhiteSpace(q))
+            {
+                var ql = q.Trim().ToLower();
+                students = students.Where(s =>
+                    (s.StudentName   ?? "").ToLower().Contains(ql) ||
+                    (s.RegistrationNo ?? "").ToLower().Contains(ql) ||
+                    (s.FatherName    ?? "").ToLower().Contains(ql)
+                ).ToList();
+            }
+            return Ok(mapper.Map<List<StudentDto>>(students));
         }
 
     }

@@ -10,5 +10,6 @@ namespace InstituteWebAPI.Repositories.IRepository
         Task<Admissions?> UpdateAsync(Guid id, Admissions admission);
         Task<Admissions?> DeleteAsync(Guid id);
         Task<List<Admissions>> SearchAdmissionsAsync(string registrationNo, string StudentName, string fatherName, string cnic, string fatherContact);
+        Task<List<Admissions>> GetByStudentAsync(Guid studentId);
     }
 }

@@ -118,34 +118,29 @@ namespace InstituteWebAPI.Repositories.Repository
             string formattedSerial = newSerial.ToString("D3");     // e.g., 001
             student.RegistrationNo = $"RZKG-{monthYear}-{formattedSerial}";
 
-            var fileExtension = Path.GetExtension(student.file.FileName);
-
-            var localFilePath = Path.Combine(webHostEnvironment.ContentRootPath, "Images", "Students", $"{student.RegistrationNo}{fileExtension}");
-
-
-            using (var image = await Image.LoadAsync(student.file.OpenReadStream()))
+            if (student.file != null && student.file.Length > 0)
             {
-                image.Mutate(x=> x.Resize(600,0));
+                var fileExtension = Path.GetExtension(student.file.FileName);
+                var localFilePath = Path.Combine(webHostEnvironment.ContentRootPath, "Images", "Students", $"{student.RegistrationNo}{fileExtension}");
 
-                var jpegEncoder = new JpegEncoder()
+                using (var image = await Image.LoadAsync(student.file.OpenReadStream()))
                 {
-                    Quality = 75
-                };
+                    image.Mutate(x => x.Resize(600, 0));
 
-                await image.SaveAsync(localFilePath, jpegEncoder);
+                    var jpegEncoder = new JpegEncoder()
+                    {
+                        Quality = 75
+                    };
 
+                    await image.SaveAsync(localFilePath, jpegEncoder);
+                }
+
+                student.Picture = $"{httpContextAccessor.HttpContext.Request.Scheme}://{httpContextAccessor.HttpContext.Request.Host}{httpContextAccessor.HttpContext.Request.PathBase}/Images/Students/{student.RegistrationNo}{fileExtension}";
             }
-
-            //    using var stream = new FileStream(localFilePath, FileMode.Create);
-
-            //await student.file.CopyToAsync(stream);
-
-            var urlFilePath = $"{httpContextAccessor.HttpContext.Request.Scheme}://{httpContextAccessor.HttpContext.Request.Host}{httpContextAccessor.HttpContext.Request.PathBase}/Images/Students/{student.RegistrationNo}{fileExtension}";
 
 
             student.CreatedAt = DateTime.Now;
             student.ModifiedAt = DateTime.Now;
-            student.Picture = urlFilePath;
             await _DbContext.Students.AddAsync(student);
             await _DbContext.SaveChangesAsync();
             return student;

@@ -34,6 +34,5 @@ namespace InstituteWebAPI.Models.DTO.Students
        public string? Picture { get; set; }
         public bool IsEnrolled { get; set; }
         public string? Remarks { get; set; }
-        public IFormFile file { get; set; }
     }
 }

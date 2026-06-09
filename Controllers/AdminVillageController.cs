@@ -9,6 +9,7 @@ namespace InstituteWebAPI.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
+    [Microsoft.AspNetCore.Authorization.Authorize(Roles = "Admin")]
     public class AdminVillageController : ControllerBase
     {
         private readonly IVillageRepository villageRepository;

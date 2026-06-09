@@ -9,5 +9,6 @@ namespace InstituteWebAPI.Repositories.IRepository
         Task<TeacherCourses> AddAsync(TeacherCourses teacherCourse);
         Task<TeacherCourses?> UpdateAsync(Guid id, TeacherCourses teacherCourse);
         Task<TeacherCourses?> DeleteAsync(Guid id);
+        Task<List<TeacherCourses>> GetByTeacherAsync(Guid teacherId);
     }
 }

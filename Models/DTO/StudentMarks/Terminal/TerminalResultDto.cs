@@ -44,8 +44,11 @@ namespace InstituteWebAPI.Models.DTO.StudentMarks.Terminal
 
         public string Grade { get; set; } = "";
 
-        // Pass/Fail/1st/2nd/3rd
+        // Pass/Fail/1st/2nd/3rd/Promoted
         public string Result { get; set; } = "";
+
+        // True when an admin manually overrode the result.
+        public bool IsResultManual { get; set; }
 
         // Flags for UI display
         public bool NI_Month1 { get; set; }

@@ -15,7 +15,12 @@ public sealed class TermContext : ITermContext
 
     public async Task<Term> GetActiveTermAsync(CancellationToken cancellationToken = default)
     {
-        var active = await _db.Term.AsNoTracking().FirstOrDefaultAsync(t => t.IsActive, cancellationToken);
+        // If more than one term is flagged active (legacy data), pick the most-recently-started
+        // so the "active term" is deterministic across the whole app.
+        var active = await _db.Term.AsNoTracking()
+            .Where(t => t.IsActive)
+            .OrderByDescending(t => t.TermStart)
+            .FirstOrDefaultAsync(cancellationToken);
         if (active is null)
         {
             throw new InvalidOperationException("No active term found. Please activate a term first.");

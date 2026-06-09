@@ -17,5 +17,6 @@ namespace InstituteWebAPI.Models.DTO.CurrentClasses
         public TermDto Term { get; set; }
         public DateTime CreatedOn { get; set; }
         public bool IsActive { get; set; }
+        public string? Room { get; set; }
     }
 }

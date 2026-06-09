@@ -51,6 +51,8 @@ namespace InstituteWebAPI.Repositories.Repository
             return await dbContext.Admissions
                 .Include(a => a.Student)
                 .Include(a => a.Course)
+                .Include(a => a.AdmittedClass)
+                .OrderByDescending(a => a.CreatedAt)
                 .ToListAsync();
         }
 
@@ -59,6 +61,7 @@ namespace InstituteWebAPI.Repositories.Repository
             return await dbContext.Admissions
                 .Include(a => a.Student)
                 .Include(a => a.Course)
+                .Include(a => a.AdmittedClass)
                 .FirstOrDefaultAsync(a => a.AdmissionID == id);
         }
 
@@ -81,16 +84,29 @@ namespace InstituteWebAPI.Repositories.Repository
 
             existing.RegistrationDate = admission.RegistrationDate;
             existing.LeavingDate = admission.LeavingDate;
-            // Persist monthly fee and due date
             existing.MonthlyFee = admission.MonthlyFee;
+            existing.AdmissionFee = admission.AdmissionFee;
             existing.DueDate = admission.DueDate;
             existing.Status = admission.Status;
             existing.IsActive = admission.IsActive;
+            existing.IsFree = admission.IsFree;
             existing.CourseID = admission.CourseID;
+            existing.AdmittedClassID = admission.AdmittedClassID;
             existing.ModifiedAt = DateTime.Now;
 
             await dbContext.SaveChangesAsync();
             return existing;
+        }
+
+        public async Task<List<Admissions>> GetByStudentAsync(Guid studentId)
+        {
+            return await dbContext.Admissions
+                .Include(a => a.Student)
+                .Include(a => a.Course)
+                .Include(a => a.AdmittedClass)
+                .Where(a => a.StudentID == studentId)
+                .OrderByDescending(a => a.CreatedAt)
+                .ToListAsync();
         }
 
         public async Task<List<Admissions>> SearchAdmissionsAsync(string registrationNo, string StudentName, string fatherName, string cnic, string fatherContact)
@@ -98,6 +114,7 @@ namespace InstituteWebAPI.Repositories.Repository
             return await dbContext.Admissions
                 .Include(a => a.Student)
                 .Include(a => a.Course)
+                .Include(a => a.AdmittedClass)
                 .Where(a =>
                     (registrationNo == null || a.Student.RegistrationNo.Contains(registrationNo)) &&
                     (StudentName == null || a.Student.StudentName.Contains(StudentName)) &&

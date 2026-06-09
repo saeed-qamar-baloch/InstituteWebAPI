@@ -65,7 +65,12 @@ namespace InstituteWebAPI.Repositories.Repository
 
         public async Task<Term?> GetActiveAsync()
         {
-            return await _dbContext.Term.AsNoTracking().FirstOrDefaultAsync(t => t.IsActive);
+            // Deterministic when multiple terms are flagged active (legacy data):
+            // pick the most-recently-started one.
+            return await _dbContext.Term.AsNoTracking()
+                .Where(t => t.IsActive)
+                .OrderByDescending(t => t.TermStart)
+                .FirstOrDefaultAsync();
         }
 
         public async Task<Term?> UpdateAsync(Guid termID, Term term)
@@ -87,7 +92,6 @@ namespace InstituteWebAPI.Repositories.Repository
 
 
 
-            existingTerm.TermID = term.TermID;
             existingTerm.TermName = term.TermName;
             existingTerm.TermStart = term.TermStart;
             existingTerm.TermEnd = term.TermEnd;

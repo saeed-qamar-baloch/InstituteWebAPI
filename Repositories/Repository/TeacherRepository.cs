@@ -30,10 +30,10 @@ public class TeacherRepository : ITeacherRepository
         // Use the provided RegDate to generate the RegistrationNo
         string monthYear = teacher.RegistrationDate.ToString("MMMyy"); // e.g., Jan25
         string formattedSerial = newSerial.ToString("D3");     // e.g., 001
-        teacher.RegistrationNo = $"RT-{monthYear}-{formattedSerial}";
+        teacher.RegistrationNo = $"LT-{monthYear}-{formattedSerial}";
 
 
-        if(teacher.file!= null)
+        if (teacher.file != null)
         {
             var fileExtension = Path.GetExtension(teacher.file.FileName);
 
@@ -45,8 +45,12 @@ public class TeacherRepository : ITeacherRepository
 
             teacher.Picture = urlPath;
         }
+        else
+        {
+            // Picture column is NOT NULL — default to empty string when no photo is uploaded
+            teacher.Picture ??= string.Empty;
+        }
 
-       
         await dbContext.Teachers.AddAsync(teacher);
         await dbContext.SaveChangesAsync();
         return teacher;
@@ -88,20 +92,29 @@ public class TeacherRepository : ITeacherRepository
         if (teacher == null) return null;
 
 
-        if (teacher.file
-            != null)
+        if (updated.file != null)
         {
-            var fileExtension = Path.GetExtension(teacher.file.FileName);
+            var fileExtension = Path.GetExtension(updated.file.FileName);
 
             var localFilePath = Path.Combine(webHostEnvironment.ContentRootPath, "Images", "Teachers", $"{teacher.RegistrationNo}{fileExtension}");
             var urlPath = $"{httpContextAccessor.HttpContext.Request.Scheme}://{httpContextAccessor.HttpContext.Request.Host}{httpContextAccessor.HttpContext.Request.PathBase}/Images/Teachers/{teacher.RegistrationNo}{fileExtension}";
 
             using var stream = new FileStream(localFilePath, FileMode.Create);
-            await teacher.file.CopyToAsync(stream);
+            await updated.file.CopyToAsync(stream);
 
-            teacher.Picture = urlPath;
-
+            updated.Picture = urlPath;
         }
+        else
+        {
+            // Keep existing picture if no new file uploaded
+            updated.Picture = teacher.Picture;
+        }
+
+        // Preserve server-managed fields not present on the update DTO
+        updated.TeacherID = teacher.TeacherID;   // never let the PK be overwritten
+        updated.Serial = teacher.Serial;
+        updated.IdentityUserId = teacher.IdentityUserId;
+        updated.RegistrationNo = teacher.RegistrationNo;
 
         dbContext.Entry(teacher).CurrentValues.SetValues(updated);
         await dbContext.SaveChangesAsync();

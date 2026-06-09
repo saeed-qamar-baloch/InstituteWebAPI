@@ -40,4 +40,16 @@ namespace InstituteWebAPI.Models.DTO.Attendance
         [Required]
         public AttendanceStatus Status { get; set; } = AttendanceStatus.Present;
     }
+
+    public class StudentAttendanceCalendarDto
+    {
+        public int Year { get; set; }
+        public List<StudentAttendanceMonthDto> Months { get; set; } = new();
+    }
+
+    public class StudentAttendanceMonthDto
+    {
+        public int Month { get; set; }
+        public List<string?> Days { get; set; } = new();
+    }
 }

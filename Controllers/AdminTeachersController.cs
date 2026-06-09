@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Mvc;
 
 [Route("api/[controller]")]
 [ApiController]
+[Microsoft.AspNetCore.Authorization.Authorize(Roles = "Admin")]
 public class AdminTeachersController : ControllerBase
 {
     private readonly ITeacherRepository repo;
@@ -53,25 +54,25 @@ public class AdminTeachersController : ControllerBase
     public async Task<IActionResult> Create([FromForm] AddTeacherDto dto)
     {
         var teacher = mapper.Map<Teachers>(dto);
+        teacher.file = dto.file;           // must be set BEFORE AddAsync so the repo can save the photo
         teacher = await repo.AddAsync(teacher);
-
-        teacher.file = dto.file;
 
         return Ok(mapper.Map<TeacherDto>(teacher));
     }
 
     [HttpPut("{id:Guid}")]
-    public async Task<IActionResult> Update(Guid id, [FromBody] UpdateTeacherDto dto)
+    public async Task<IActionResult> Update(Guid id, [FromForm] UpdateTeacherDto dto)
     {
         var teacher = mapper.Map<Teachers>(dto);
+        teacher.file = dto.file;
         var updated = await repo.UpdateAsync(id, teacher);
         if (updated == null) return NotFound();
 
         return Ok(mapper.Map<TeacherDto>(updated));
     }
 
-    [HttpDelete]
-    public async Task<IActionResult> Delete([FromBody] Guid id)
+    [HttpDelete("{id:Guid}")]
+    public async Task<IActionResult> Delete([FromRoute] Guid id)
     {
         var deleted = await repo.DeleteAsync(id);
         if (deleted == null) return NotFound();

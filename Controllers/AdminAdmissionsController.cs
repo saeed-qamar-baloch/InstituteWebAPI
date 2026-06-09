@@ -3,12 +3,14 @@ using InstituteWebAPI.CustomActionFilters;
 using InstituteWebAPI.Models.DTO.Admissions;
 using InstituteWebAPI.Repositories.IRepository;
 using InstituteWebApp.Models.Domain;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace InstituteWebAPI.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
+    [Authorize(Roles = "Admin")]
     public class AdminAdmissionsController : ControllerBase
     {
         private readonly IAdmissionsRepository repository;
@@ -79,6 +81,13 @@ namespace InstituteWebAPI.Controllers
             var deleted = await repository.DeleteAsync(id);
             if (deleted == null) return NotFound();
             return Ok(mapper.Map<AdmissionDto>(deleted));
+        }
+
+        [HttpGet("by-student/{studentId:Guid}")]
+        public async Task<IActionResult> GetByStudent([FromRoute] Guid studentId)
+        {
+            var result = await repository.GetByStudentAsync(studentId);
+            return Ok(mapper.Map<List<AdmissionDto>>(result));
         }
 
         [HttpGet("search")]

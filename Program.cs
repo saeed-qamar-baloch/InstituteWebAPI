@@ -14,8 +14,25 @@ using InstituteWebAPI.Services.TermContext;
 using InstituteWebAPI.Services.StudentMonthlyResults;
 using InstituteWebAPI.Services.FeeManagement;
 using InstituteWebAPI.Models.Configuration;
+using InstituteWebAPI.BackgroundJobs;
+using Microsoft.AspNetCore.Diagnostics;
 
 var builder = WebApplication.CreateBuilder(args);
+
+// ── CORS ─────────────────────────────────────────────────────────────────────
+var allowedOrigins = builder.Configuration.GetSection("Cors:AllowedOrigins").Get<string[]>()
+    ?? new[] { "http://localhost:5173", "http://localhost:3000" };
+
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy("RozhnCorsPolicy", policy =>
+    {
+        policy.WithOrigins(allowedOrigins)
+              .AllowAnyHeader()
+              .AllowAnyMethod()
+              .AllowCredentials();
+    });
+});
 
 // Add services to the container.
 
@@ -76,7 +93,10 @@ builder.Services.AddSwaggerGen(options =>
     });
 });
 
-builder.Services.AddDbContext<RozhnInstituteDbContext>(options => options.UseSqlServer(builder.Configuration.GetConnectionString("RozhnWebConnectionString")));
+builder.Services.AddDbContext<RozhnInstituteDbContext>(options =>
+    options
+        .UseSqlServer(builder.Configuration.GetConnectionString("RozhnWebConnectionString"))
+        .ConfigureWarnings(w => w.Ignore(Microsoft.EntityFrameworkCore.Diagnostics.RelationalEventId.PendingModelChangesWarning)));
 
 builder.Services.AddDbContext<RozhnInstituteAuthDbContext>(options => options.UseSqlServer(builder.Configuration.GetConnectionString("RozhnWebAuthConnectionString")));
 
@@ -99,11 +119,21 @@ builder.Services.AddScoped<ITestsRepository, TestsRepository>();
 builder.Services.AddScoped<IStudentMarksRepository, StudentMarksRepository>();
 builder.Services.AddScoped<IClassStudentsRepository, ClassStudentsRepository>();
 builder.Services.AddScoped<IFeeTypeRepository, FeeTypeRepository>();
+builder.Services.AddScoped<ITestTypeRepository, TestTypeRepository>();
 builder.Services.AddScoped<ITeacherIdentityLinkRepository, TeacherIdentityLinkRepository>();
 builder.Services.AddScoped<IFeeManagementRepository, FeeManagementRepository>();
+builder.Services.AddScoped<IGuardianRepository, GuardianRepository>();
+builder.Services.AddScoped<IScholarshipRepository, ScholarshipRepository>();
+builder.Services.AddScoped<IResultApprovalRepository, ResultApprovalRepository>();
+builder.Services.AddScoped<IMarkEditRequestRepository, MarkEditRequestRepository>();
+builder.Services.AddScoped<ITeacherDailyAttendanceRepository, TeacherDailyAttendanceRepository>();
 builder.Services.AddScoped<ITermContext, TermContext>();
+builder.Services.AddScoped<InstituteWebAPI.Services.Audit.IAuditService, InstituteWebAPI.Services.Audit.AuditService>();
+builder.Services.AddScoped<Microsoft.AspNetCore.Authorization.IAuthorizationHandler, InstituteWebAPI.Services.Access.AreaPermissionHandler>();
 builder.Services.AddScoped<IStudentMonthlyResultService, StudentMonthlyResultService>();
 builder.Services.AddScoped<IFeeManagementService, FeeManagementService>();
+builder.Services.AddScoped<InstituteWebAPI.Services.Notifications.IAppNotificationService, InstituteWebAPI.Services.Notifications.AppNotificationService>();
+builder.Services.AddHostedService<MonthlyFeeGenerationJob>();
 
 
 builder.Services.AddScoped<ITokenRepository, TokenRepository>();
@@ -130,6 +160,15 @@ builder.Services.Configure<IdentityOptions>(options =>
 });
 
 
+// Fail fast if the JWT signing key is missing or too weak for HS256.
+var jwtKey = builder.Configuration["Jwt:Key"];
+if (string.IsNullOrWhiteSpace(jwtKey) || jwtKey.Length < 32)
+{
+    throw new InvalidOperationException(
+        "Jwt:Key is missing or too short. Set a strong secret (32+ chars) via configuration " +
+        "or the Jwt__Key environment variable before starting the API.");
+}
+
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme).AddJwtBearer(options => options.TokenValidationParameters = new TokenValidationParameters
 {
     ValidateIssuer = true,
@@ -138,10 +177,91 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme).AddJw
     ValidateIssuerSigningKey = true,
     ValidIssuer = builder.Configuration["Jwt:Issuer"],
     ValidAudience = builder.Configuration["Jwt:Audience"],
-    IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(builder.Configuration["Jwt:Key"]))
+    IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtKey))
 });
 
 var app = builder.Build();
+
+// Auto-apply any pending EF Core migrations on startup
+using (var scope = app.Services.CreateScope())
+{
+    var db = scope.ServiceProvider.GetRequiredService<RozhnInstituteDbContext>();
+    await db.Database.MigrateAsync();
+
+    // Add columns that were added to the domain model without a proper Designer.cs migration.
+    // Each IF block is idempotent — safe to run on every startup.
+    await db.Database.ExecuteSqlRawAsync(@"
+        IF NOT EXISTS (
+            SELECT 1 FROM sys.columns
+            WHERE object_id = OBJECT_ID(N'Admissions') AND name = N'AdmittedClassID')
+        BEGIN
+            ALTER TABLE [Admissions]
+                ADD [AdmittedClassID] uniqueidentifier NULL;
+        END
+    ");
+
+    await db.Database.ExecuteSqlRawAsync(@"
+        IF NOT EXISTS (
+            SELECT 1 FROM sys.columns
+            WHERE object_id = OBJECT_ID(N'Admissions') AND name = N'AdmissionFee')
+        BEGIN
+            ALTER TABLE [Admissions]
+                ADD [AdmissionFee] decimal(18,2) NOT NULL DEFAULT 0;
+        END
+    ");
+
+    await db.Database.ExecuteSqlRawAsync(@"
+        IF EXISTS (
+            SELECT 1 FROM sys.columns
+            WHERE object_id = OBJECT_ID(N'Admissions') AND name = N'AdmittedClassID')
+        BEGIN
+            IF NOT EXISTS (
+                SELECT 1 FROM sys.indexes
+                WHERE object_id = OBJECT_ID(N'Admissions')
+                  AND name = N'IX_Admissions_AdmittedClassID')
+            BEGIN
+                CREATE INDEX [IX_Admissions_AdmittedClassID]
+                    ON [Admissions] ([AdmittedClassID]);
+            END
+        END
+    ");
+
+    await db.Database.ExecuteSqlRawAsync(@"
+        IF NOT EXISTS (
+            SELECT 1 FROM sys.columns
+            WHERE object_id = OBJECT_ID(N'StudentMonthlyResults') AND name = N'Status')
+        BEGIN
+            ALTER TABLE [StudentMonthlyResults]
+                ADD [Status] nvarchar(50) NULL;
+        END
+    ");
+
+    await db.Database.ExecuteSqlRawAsync(@"
+        IF NOT EXISTS (
+            SELECT 1 FROM sys.columns
+            WHERE object_id = OBJECT_ID(N'CardRequests') AND name = N'RequestedByTeacherID')
+        BEGIN
+            ALTER TABLE [CardRequests]
+                ADD [RequestedByTeacherID] uniqueidentifier NULL;
+        END
+    ");
+
+    await db.Database.ExecuteSqlRawAsync(@"
+        IF EXISTS (
+            SELECT 1 FROM sys.columns
+            WHERE object_id = OBJECT_ID(N'CardRequests') AND name = N'RequestedByTeacherID')
+        BEGIN
+            IF NOT EXISTS (
+                SELECT 1 FROM sys.indexes
+                WHERE object_id = OBJECT_ID(N'CardRequests')
+                  AND name = N'IX_CardRequests_RequestedByTeacherID')
+            BEGIN
+                CREATE INDEX [IX_CardRequests_RequestedByTeacherID]
+                    ON [CardRequests] ([RequestedByTeacherID]);
+            END
+        END
+    ");
+}
 
 // Seed roles + default admin user
 await AuthDbSeeder.SeedAsync(app.Services);
@@ -152,8 +272,34 @@ if (app.Environment.IsDevelopment())
     app.UseSwagger();
     app.UseSwaggerUI();
 }
+else
+{
+    // Production: return a clean JSON error (no stack traces) and log the exception.
+    app.UseExceptionHandler(errApp =>
+    {
+        errApp.Run(async context =>
+        {
+            var feature = context.Features.Get<IExceptionHandlerPathFeature>();
+            var logger  = context.RequestServices
+                .GetRequiredService<ILoggerFactory>()
+                .CreateLogger("GlobalExceptionHandler");
+            logger.LogError(feature?.Error, "Unhandled exception on {Method} {Path}",
+                context.Request.Method, context.Request.Path);
+
+            context.Response.StatusCode  = StatusCodes.Status500InternalServerError;
+            context.Response.ContentType = "application/json";
+            await context.Response.WriteAsJsonAsync(new
+            {
+                message = "An unexpected error occurred. Please try again."
+            });
+        });
+    });
+    app.UseHsts();
+}
 
 app.UseHttpsRedirection();
+
+app.UseCors("RozhnCorsPolicy");
 
 app.UseAuthentication();
 app.UseAuthorization();
@@ -162,11 +308,17 @@ app.UseStaticFiles(
     new StaticFileOptions
     {
         FileProvider = new PhysicalFileProvider(Path.Combine(Directory.GetCurrentDirectory(), "Images")),
-        RequestPath = "/images"
+        RequestPath = "/images",
+        // Allow the SPA (different origin) to read these images onto a <canvas>
+        // for ID cards / admit cards without tainting it.
+        OnPrepareResponse = ctx =>
+        {
+            ctx.Context.Response.Headers["Access-Control-Allow-Origin"] = "*";
+            ctx.Context.Response.Headers["Access-Control-Allow-Methods"] = "GET";
+        }
     }
 
     );
 
 app.MapControllers();
-
 app.Run();

@@ -101,6 +101,11 @@ namespace InstituteWebAPI.Controllers
                 return NotFound("Teacher not found.");
             }
 
+            if (!string.IsNullOrWhiteSpace(teacher.IdentityUserId))
+            {
+                return BadRequest("This teacher already has a login account.");
+            }
+
             var existingUser = await userManager.FindByEmailAsync(dto.Email);
             if (existingUser != null)
             {
@@ -129,6 +134,60 @@ namespace InstituteWebAPI.Controllers
             await teacherIdentityLinkRepository.LinkTeacherToUserIdAsync(teacher.TeacherID, identityUser.Id);
 
             return Ok("Teacher credentials created successfully.");
+        }
+
+        // GET /api/Auth/teacher-account/{teacherId}
+        // Returns whether the teacher already has an identity account and their email if so.
+        [HttpGet]
+        [Route("teacher-account/{teacherId:guid}")]
+        [Authorize(Roles = "Admin")]
+        public async Task<IActionResult> GetTeacherAccount(Guid teacherId)
+        {
+            var teacher = await teacherRepository.GetByIdAsync(teacherId);
+            if (teacher == null) return NotFound("Teacher not found.");
+
+            // The login account link is stored in teacher.IdentityUserId.
+            IdentityUser? identityUser = null;
+            if (!string.IsNullOrWhiteSpace(teacher.IdentityUserId))
+                identityUser = await userManager.FindByIdAsync(teacher.IdentityUserId);
+            // Legacy fallback: older records kept the user id in RegistrationNo.
+            if (identityUser == null && !string.IsNullOrWhiteSpace(teacher.RegistrationNo))
+                identityUser = await userManager.FindByIdAsync(teacher.RegistrationNo);
+
+            if (identityUser == null)
+                return Ok(new { hasAccount = false, email = (string?)null });
+
+            return Ok(new { hasAccount = true, email = identityUser.Email });
+        }
+
+        // POST /api/Auth/reset-teacher-password
+        // Admin resets a teacher's login password.
+        [HttpPost]
+        [Route("reset-teacher-password")]
+        [Authorize(Roles = "Admin")]
+        public async Task<IActionResult> ResetTeacherPassword([FromBody] ResetTeacherPasswordDto dto)
+        {
+            if (!ModelState.IsValid) return BadRequest(ModelState);
+
+            var teacher = await teacherRepository.GetByIdAsync(dto.TeacherID);
+            if (teacher == null) return NotFound("Teacher not found.");
+
+            IdentityUser? identityUser = null;
+            if (!string.IsNullOrWhiteSpace(teacher.IdentityUserId))
+                identityUser = await userManager.FindByIdAsync(teacher.IdentityUserId);
+            if (identityUser == null && !string.IsNullOrWhiteSpace(teacher.RegistrationNo))
+                identityUser = await userManager.FindByIdAsync(teacher.RegistrationNo);
+
+            if (identityUser == null)
+                return BadRequest("No account found for this teacher. Create one first.");
+
+            var token = await userManager.GeneratePasswordResetTokenAsync(identityUser);
+            var result = await userManager.ResetPasswordAsync(identityUser, token, dto.NewPassword);
+
+            if (!result.Succeeded)
+                return BadRequest(string.Join(", ", result.Errors.Select(e => e.Description)));
+
+            return Ok("Password reset successfully.");
         }
 
         [HttpPost]

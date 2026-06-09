@@ -31,13 +31,34 @@ namespace InstituteWebApp.Models.Domain
         public Guid? Month2TestID { get; set; }
         public bool IncludeMonth2 { get; set; }
 
-        // Persisted calculated values
-        public float TotalMarksConsidered { get; set; }
-        public float TotalObtained { get; set; }
-        public float Percentage { get; set; }
-        public string? Result { get; set; }
+        // ── Per-month snapshot (stored at generation time) ────────────────────
+        // Month 1 (optional)
+        public float Month1ObtainedMarks { get; set; }
+        public float Month1TotalMarks    { get; set; }
 
-        public DateTime CreatedOn { get; set; } = DateTime.UtcNow;
-        public DateTime? UpdatedOn { get; set; }
+        // Month 2 (optional)
+        public float Month2ObtainedMarks { get; set; }
+        public float Month2TotalMarks    { get; set; }
+
+        // Month 3 (required)
+        public float Month3ObtainedMarks { get; set; }
+        public float Month3TotalMarks    { get; set; }
+
+        // ── Terminal totals ───────────────────────────────────────────────────
+        public float TotalMarksConsidered { get; set; }
+        public float TotalObtained        { get; set; }
+        public float Percentage           { get; set; }
+        public string? Grade              { get; set; }
+        public string? Result             { get; set; }   // Pass | Fail | 1st | 2nd | 3rd | Promoted
+
+        /// <summary>
+        /// When true, an admin has manually set <see cref="Result"/> (e.g. forced a
+        /// failing student to "Promoted"). Regenerating the terminal result will NOT
+        /// overwrite the result/position for these rows.
+        /// </summary>
+        public bool IsResultManual        { get; set; }
+
+        public DateTime  CreatedOn  { get; set; } = DateTime.UtcNow;
+        public DateTime? UpdatedOn  { get; set; }
     }
 }

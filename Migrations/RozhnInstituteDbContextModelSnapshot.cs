@@ -22,10 +22,253 @@ namespace InstituteWebAPI.Migrations
 
             SqlServerModelBuilderExtensions.UseIdentityColumns(modelBuilder);
 
+            modelBuilder.Entity("InstituteWebApp.Models.Domain.RolePermission", b =>
+                {
+                    b.Property<Guid>("RolePermissionID")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("Area")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("RoleName")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(450)");
+
+                    b.HasKey("RolePermissionID");
+
+                    b.HasIndex("RoleName");
+
+                    b.ToTable("RolePermissions");
+                });
+
+            modelBuilder.Entity("InstituteWebApp.Models.Domain.AuditLog", b =>
+                {
+                    b.Property<Guid>("AuditLogID")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("Action")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime>("CreatedOn")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("Details")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("EntityId")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("EntityType")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("Module")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("Role")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("UserId")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("UserName")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.HasIndex("CreatedOn");
+
+                    b.HasKey("AuditLogID");
+
+                    b.ToTable("AuditLogs");
+                });
+
+            modelBuilder.Entity("InstituteWebApp.Models.Domain.CardRequest", b =>
+                {
+                    b.Property<Guid>("CardRequestID")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<decimal>("Amount")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<string>("CardType")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime>("CreatedOn")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime?>("DeliveredOn")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("Notes")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime?>("PaidOn")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime>("RequestDate")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<Guid>("StudentID")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.HasKey("CardRequestID");
+
+                    b.HasIndex("StudentID");
+
+                    b.ToTable("CardRequests");
+                });
+
+            modelBuilder.Entity("InstituteWebApp.Models.Domain.ExpenseCategory", b =>
+                {
+                    b.Property<Guid>("ExpenseCategoryID")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime>("CreatedOn")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("Description")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.HasKey("ExpenseCategoryID");
+
+                    b.ToTable("ExpenseCategories");
+                });
+
+            modelBuilder.Entity("InstituteWebApp.Models.Domain.Expense", b =>
+                {
+                    b.Property<Guid>("ExpenseID")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<decimal>("Amount")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<DateTime>("CreatedOn")
+                        .HasColumnType("datetime2");
+
+                    b.Property<Guid>("ExpenseCategoryID")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime>("ExpenseDate")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("Notes")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("PaymentMethod")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("Title")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.HasKey("ExpenseID");
+
+                    b.HasIndex("ExpenseCategoryID");
+
+                    b.ToTable("Expenses");
+                });
+
+            modelBuilder.Entity("InstituteWebApp.Models.Domain.AdmitCard", b =>
+                {
+                    b.Property<Guid>("AdmitCardID")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid>("CurrentClassID")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime>("GeneratedOn")
+                        .HasColumnType("datetime2");
+
+                    b.Property<Guid>("StudentID")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid?>("TermID")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<int>("UnpaidMonths")
+                        .HasColumnType("int");
+
+                    b.HasKey("AdmitCardID");
+
+                    b.HasIndex("CurrentClassID");
+
+                    b.HasIndex("StudentID");
+
+                    b.ToTable("AdmitCards");
+                });
+
+            modelBuilder.Entity("InstituteWebApp.Models.Domain.AppNotification", b =>
+                {
+                    b.Property<Guid>("AppNotificationId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<bool>("IsRead")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("Link")
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.Property<string>("Message")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<DateTime?>("ReadAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("Title")
+                        .IsRequired()
+                        .HasMaxLength(150)
+                        .HasColumnType("nvarchar(150)");
+
+                    b.Property<int>("Type")
+                        .HasColumnType("int");
+
+                    b.Property<string>("UserId")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(450)");
+
+                    b.HasKey("AppNotificationId");
+
+                    b.HasIndex("UserId");
+
+                    b.ToTable("AppNotifications");
+                });
+
             modelBuilder.Entity("InstituteWebApp.Models.Domain.Admissions", b =>
                 {
                     b.Property<Guid>("AdmissionID")
                         .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<decimal>("AdmissionFee")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<Guid?>("AdmittedClassID")
                         .HasColumnType("uniqueidentifier");
 
                     b.Property<Guid>("CourseID")
@@ -38,6 +281,9 @@ namespace InstituteWebAPI.Migrations
                         .HasColumnType("int");
 
                     b.Property<bool>("IsActive")
+                        .HasColumnType("bit");
+
+                    b.Property<bool>("IsFree")
                         .HasColumnType("bit");
 
                     b.Property<DateTime?>("LeavingDate")
@@ -60,6 +306,8 @@ namespace InstituteWebAPI.Migrations
                         .HasColumnType("uniqueidentifier");
 
                     b.HasKey("AdmissionID");
+
+                    b.HasIndex("AdmittedClassID");
 
                     b.HasIndex("CourseID");
 
@@ -106,6 +354,9 @@ namespace InstituteWebAPI.Migrations
                     b.Property<Guid>("CourseID")
                         .HasColumnType("uniqueidentifier");
 
+                    b.Property<int>("Rank")
+                        .HasColumnType("int");
+
                     b.HasKey("ClassID");
 
                     b.HasIndex("CourseID");
@@ -149,6 +400,9 @@ namespace InstituteWebAPI.Migrations
 
                     b.Property<bool>("IsActive")
                         .HasColumnType("bit");
+
+                    b.Property<string>("Room")
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<Guid?>("SectionID")
                         .HasColumnType("uniqueidentifier");
@@ -224,6 +478,32 @@ namespace InstituteWebAPI.Migrations
                     b.ToTable("FeeDues");
                 });
 
+            modelBuilder.Entity("InstituteWebApp.Models.Domain.FeeSettings", b =>
+                {
+                    b.Property<Guid>("FeeSettingsId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<decimal>("AdmissionFeeAmount")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<decimal>("CardFeeAmount")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<DateTime?>("FeeStartMonth")
+                        .HasColumnType("datetime2");
+
+                    b.Property<decimal>("LateFeeAmount")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.HasKey("FeeSettingsId");
+
+                    b.ToTable("FeeSettings");
+                });
+
             modelBuilder.Entity("InstituteWebApp.Models.Domain.FeeType", b =>
                 {
                     b.Property<Guid>("FeeTypeID")
@@ -248,27 +528,145 @@ namespace InstituteWebAPI.Migrations
                     b.ToTable("FeeTypes");
                 });
 
-            modelBuilder.Entity("InstituteWebApp.Models.Domain.FeeSettings", b =>
+            modelBuilder.Entity("InstituteWebApp.Models.Domain.Guardian", b =>
                 {
-                    b.Property<Guid>("FeeSettingsId")
+                    b.Property<Guid>("GuardianID")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uniqueidentifier");
 
-                    b.Property<decimal>("AdmissionFeeAmount")
-                        .HasColumnType("decimal(18,2)");
+                    b.Property<string>("Address")
+                        .HasColumnType("nvarchar(max)");
 
-                    b.Property<decimal>("CardFeeAmount")
-                        .HasColumnType("decimal(18,2)");
+                    b.Property<string>("Cnic")
+                        .HasColumnType("nvarchar(max)");
 
-                    b.Property<decimal>("LateFeeAmount")
-                        .HasColumnType("decimal(18,2)");
+                    b.Property<string>("Contact")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
 
-                    b.Property<DateTime>("UpdatedAt")
+                    b.Property<DateTime>("CreatedAt")
                         .HasColumnType("datetime2");
 
-                    b.HasKey("FeeSettingsId");
+                    b.Property<string>("GuardianName")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
 
-                    b.ToTable("FeeSettings");
+                    b.Property<DateTime>("ModifiedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("Occupation")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("Relation")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("Remarks")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<Guid>("StudentID")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.HasKey("GuardianID");
+
+                    b.HasIndex("StudentID");
+
+                    b.ToTable("Guardians");
+                });
+
+            modelBuilder.Entity("InstituteWebApp.Models.Domain.MarkEditRequest", b =>
+                {
+                    b.Property<Guid>("RequestID")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<float>("CurrentMarks")
+                        .HasColumnType("real");
+
+                    b.Property<DateTime>("ModifiedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("Reason")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<float>("RequestedMarks")
+                        .HasColumnType("real");
+
+                    b.Property<string>("ReviewRemarks")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime?>("ReviewedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("ReviewedByUserID")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<int>("Status")
+                        .HasColumnType("int");
+
+                    b.Property<Guid>("StudentMarkID")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid>("TeacherID")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.HasKey("RequestID");
+
+                    b.HasIndex("StudentMarkID");
+
+                    b.HasIndex("TeacherID");
+
+                    b.ToTable("MarkEditRequests");
+                });
+
+            modelBuilder.Entity("InstituteWebApp.Models.Domain.Notification", b =>
+                {
+                    b.Property<Guid>("NotificationID")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<int>("Channel")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("CreatedByUserID")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("ErrorMessage")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("Message")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<int>("NotificationType")
+                        .HasColumnType("int");
+
+                    b.Property<Guid?>("RecipientID")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<int>("RecipientType")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime?>("SentAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int>("Status")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Title")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.HasKey("NotificationID");
+
+                    b.ToTable("Notifications");
                 });
 
             modelBuilder.Entity("InstituteWebApp.Models.Domain.Payment", b =>
@@ -323,6 +721,94 @@ namespace InstituteWebAPI.Migrations
                     b.ToTable("PaymentDetails");
                 });
 
+            modelBuilder.Entity("InstituteWebApp.Models.Domain.ResultApproval", b =>
+                {
+                    b.Property<Guid>("ApprovalID")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime?>("ApprovedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("ApprovedByUserID")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<Guid>("CurrentClassID")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<bool>("IsApproved")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("Remarks")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<Guid>("TermID")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.HasKey("ApprovalID");
+
+                    b.HasIndex("CurrentClassID");
+
+                    b.HasIndex("TermID", "CurrentClassID")
+                        .IsUnique();
+
+                    b.ToTable("ResultApprovals");
+                });
+
+            modelBuilder.Entity("InstituteWebApp.Models.Domain.Scholarship", b =>
+                {
+                    b.Property<Guid>("ScholarshipID")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid>("AdmissionID")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("CreatedByUserID")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<int>("DiscountPercent")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime>("FromMonth")
+                        .HasColumnType("date");
+
+                    b.Property<bool>("IsLeave")
+                        .HasColumnType("bit");
+
+                    b.Property<DateTime>("ModifiedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("Reason")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<int>("Status")
+                        .HasColumnType("int");
+
+                    b.Property<Guid>("StudentID")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime>("ToMonth")
+                        .HasColumnType("date");
+
+                    b.HasKey("ScholarshipID");
+
+                    b.HasIndex("AdmissionID");
+
+                    b.HasIndex("StudentID");
+
+                    b.ToTable("Scholarships");
+                });
+
             modelBuilder.Entity("InstituteWebApp.Models.Domain.Section", b =>
                 {
                     b.Property<Guid>("SectionID")
@@ -339,7 +825,6 @@ namespace InstituteWebAPI.Migrations
                     b.HasKey("SectionID");
 
                     b.HasIndex("TermID");
-                    b.HasIndex("TermID"); // Added index for TermID for consistency
 
                     b.ToTable("Sections");
                 });
@@ -419,7 +904,7 @@ namespace InstituteWebAPI.Migrations
                     b.Property<Guid>("CurrentClassID")
                         .HasColumnType("uniqueidentifier");
 
-                    b.Property<Guid>("MarkedByTeacherID")
+                    b.Property<Guid?>("MarkedByTeacherID")
                         .HasColumnType("uniqueidentifier");
 
                     b.Property<int>("Status")
@@ -443,6 +928,101 @@ namespace InstituteWebAPI.Migrations
                         .IsUnique();
 
                     b.ToTable("StudentAttendances");
+                });
+
+            modelBuilder.Entity("InstituteWebApp.Models.Domain.StudentFeeHistory", b =>
+                {
+                    b.Property<Guid>("FeeHistoryID")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid>("AdmissionID")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid>("CourseID")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime>("EffectiveFrom")
+                        .HasColumnType("date");
+
+                    b.Property<DateTime?>("EffectiveTo")
+                        .HasColumnType("date");
+
+                    b.Property<decimal>("FeeAmount")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("Remarks")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.HasKey("FeeHistoryID");
+
+                    b.HasIndex("CourseID");
+
+                    b.HasIndex("AdmissionID", "EffectiveFrom");
+
+                    b.ToTable("StudentFeeHistories");
+                });
+
+            modelBuilder.Entity("InstituteWebApp.Models.Domain.StudentLeaveRequest", b =>
+                {
+                    b.Property<Guid>("StudentLeaveRequestID")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid>("AdmissionID")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<Guid>("CurrentClassID")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime>("LeavingDate")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("Reason")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<Guid>("RequestedByTeacherID")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("ReviewRemarks")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime?>("ReviewedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("ReviewedByUserID")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<int>("Status")
+                        .HasColumnType("int");
+
+                    b.Property<Guid>("StudentID")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.HasKey("StudentLeaveRequestID");
+
+                    b.HasIndex("AdmissionID");
+
+                    b.HasIndex("CurrentClassID");
+
+                    b.HasIndex("RequestedByTeacherID");
+
+                    b.HasIndex("StudentID");
+
+                    b.ToTable("StudentLeaveRequests");
                 });
 
             modelBuilder.Entity("InstituteWebApp.Models.Domain.StudentMarks", b =>
@@ -643,6 +1223,82 @@ namespace InstituteWebAPI.Migrations
                     b.ToTable("TeacherCourses");
                 });
 
+            modelBuilder.Entity("InstituteWebApp.Models.Domain.TeacherDailyAttendance", b =>
+                {
+                    b.Property<Guid>("TeacherDailyAttendanceID")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime>("AttendanceDate")
+                        .HasColumnType("date");
+
+                    b.Property<DateTime>("CreatedOn")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("MarkedByUserID")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("Remarks")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime?>("ScannedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("ScannedBarcode")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<int>("Status")
+                        .HasColumnType("int");
+
+                    b.Property<Guid>("TeacherID")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime?>("UpdatedOn")
+                        .HasColumnType("datetime2");
+
+                    b.HasKey("TeacherDailyAttendanceID");
+
+                    b.HasIndex("TeacherID", "AttendanceDate")
+                        .IsUnique();
+
+                    b.ToTable("TeacherDailyAttendances");
+                });
+
+            modelBuilder.Entity("InstituteWebApp.Models.Domain.TeacherSalary", b =>
+                {
+                    b.Property<Guid>("TeacherSalaryID")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<decimal>("Amount")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<DateTime>("CreatedOn")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("Notes")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime>("PaidOn")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int>("SalaryMonth")
+                        .HasColumnType("int");
+
+                    b.Property<int>("SalaryYear")
+                        .HasColumnType("int");
+
+                    b.Property<Guid>("TeacherID")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.HasKey("TeacherSalaryID");
+
+                    b.HasIndex("TeacherID", "SalaryYear", "SalaryMonth")
+                        .IsUnique();
+
+                    b.ToTable("TeacherSalaries");
+                });
+
             modelBuilder.Entity("InstituteWebApp.Models.Domain.Teachers", b =>
                 {
                     b.Property<Guid>("TeacherID")
@@ -690,6 +1346,9 @@ namespace InstituteWebAPI.Migrations
 
                     b.Property<string>("Institute")
                         .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("IdentityUserId")
                         .HasColumnType("nvarchar(max)");
 
                     b.Property<bool>("IsTeaching")
@@ -795,6 +1454,37 @@ namespace InstituteWebAPI.Migrations
                     b.ToTable("TermMonths");
                 });
 
+            modelBuilder.Entity("InstituteWebApp.Models.Domain.TerminalPassingMark", b =>
+                {
+                    b.Property<Guid>("TerminalPassingMarkID")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<Guid>("CurrentClassID")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<float>("PassingMarks")
+                        .HasColumnType("real");
+
+                    b.Property<Guid>("TermID")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.HasKey("TerminalPassingMarkID");
+
+                    b.HasIndex("CurrentClassID");
+
+                    b.HasIndex("TermID", "CurrentClassID")
+                        .IsUnique();
+
+                    b.ToTable("TerminalPassingMarks");
+                });
+
             modelBuilder.Entity("InstituteWebApp.Models.Domain.TerminalResult", b =>
                 {
                     b.Property<Guid>("TerminalResultID")
@@ -807,20 +1497,44 @@ namespace InstituteWebAPI.Migrations
                     b.Property<Guid>("CurrentClassID")
                         .HasColumnType("uniqueidentifier");
 
+                    b.Property<string>("Grade")
+                        .HasColumnType("nvarchar(max)");
+
                     b.Property<bool>("IncludeMonth1")
                         .HasColumnType("bit");
 
                     b.Property<bool>("IncludeMonth2")
                         .HasColumnType("bit");
 
+                    b.Property<bool>("IsResultManual")
+                        .HasColumnType("bit");
+
+                    b.Property<float>("Month1ObtainedMarks")
+                        .HasColumnType("real");
+
                     b.Property<Guid?>("Month1TestID")
                         .HasColumnType("uniqueidentifier");
+
+                    b.Property<float>("Month1TotalMarks")
+                        .HasColumnType("real");
+
+                    b.Property<float>("Month2ObtainedMarks")
+                        .HasColumnType("real");
 
                     b.Property<Guid?>("Month2TestID")
                         .HasColumnType("uniqueidentifier");
 
+                    b.Property<float>("Month2TotalMarks")
+                        .HasColumnType("real");
+
+                    b.Property<float>("Month3ObtainedMarks")
+                        .HasColumnType("real");
+
                     b.Property<Guid>("Month3TestID")
                         .HasColumnType("uniqueidentifier");
+
+                    b.Property<float>("Month3TotalMarks")
+                        .HasColumnType("real");
 
                     b.Property<float>("Percentage")
                         .HasColumnType("real");
@@ -853,6 +1567,141 @@ namespace InstituteWebAPI.Migrations
                         .IsUnique();
 
                     b.ToTable("TerminalResults");
+                });
+
+            modelBuilder.Entity("InstituteWebApp.Models.Domain.TestType", b =>
+                {
+                    b.Property<Guid>("TestTypeID")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("Description")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime>("ModifiedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<Guid?>("TermID")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.HasKey("TestTypeID");
+
+                    b.ToTable("TestTypes");
+                });
+
+            modelBuilder.Entity("InstituteWebApp.Models.Domain.InstituteSetting", b =>
+                {
+                    b.Property<Guid>("InstituteSettingID")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("Address")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("Email")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("InstituteName")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("LogoUrl")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("OffDays")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("Phone")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("SinceYear")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("Tagline")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("Website")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.HasKey("InstituteSettingID");
+
+                    b.ToTable("InstituteSettings");
+                });
+
+            modelBuilder.Entity("InstituteWebApp.Models.Domain.TimetableEntry", b =>
+                {
+                    b.Property<Guid>("TimetableEntryID")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime>("CreatedOn")
+                        .HasColumnType("datetime2");
+
+                    b.Property<Guid>("CurrentClassID")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<int>("DayOfWeek")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Room")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<Guid>("SlotID")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.HasKey("TimetableEntryID");
+
+                    b.HasIndex("CurrentClassID");
+
+                    b.HasIndex("SlotID");
+
+                    b.ToTable("TimetableEntries");
+                });
+
+            modelBuilder.Entity("InstituteWebApp.Models.Domain.TestSchedule", b =>
+                {
+                    b.Property<Guid>("TestScheduleID")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime>("CreatedOn")
+                        .HasColumnType("datetime2");
+
+                    b.Property<Guid>("CurrentClassID")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("Notes")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime>("ScheduledOn")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<Guid?>("TermMonthID")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("Title")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime?>("UpdatedOn")
+                        .HasColumnType("datetime2");
+
+                    b.HasKey("TestScheduleID");
+
+                    b.HasIndex("CurrentClassID");
+
+                    b.HasIndex("TermMonthID");
+
+                    b.ToTable("TestSchedules");
                 });
 
             modelBuilder.Entity("InstituteWebApp.Models.Domain.Tests", b =>
@@ -903,8 +1752,59 @@ namespace InstituteWebAPI.Migrations
                     b.ToTable("Village");
                 });
 
+            modelBuilder.Entity("InstituteWebApp.Models.Domain.CardRequest", b =>
+                {
+                    b.HasOne("InstituteWebApp.Models.Domain.Students", "Student")
+                        .WithMany()
+                        .HasForeignKey("StudentID")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Student");
+                });
+
+            modelBuilder.Entity("InstituteWebApp.Models.Domain.Expense", b =>
+                {
+                    b.HasOne("InstituteWebApp.Models.Domain.ExpenseCategory", "ExpenseCategory")
+                        .WithMany("Expenses")
+                        .HasForeignKey("ExpenseCategoryID")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("ExpenseCategory");
+                });
+
+            modelBuilder.Entity("InstituteWebApp.Models.Domain.ExpenseCategory", b =>
+                {
+                    b.Navigation("Expenses");
+                });
+
+            modelBuilder.Entity("InstituteWebApp.Models.Domain.AdmitCard", b =>
+                {
+                    b.HasOne("InstituteWebApp.Models.Domain.CurrentClass", "CurrentClass")
+                        .WithMany()
+                        .HasForeignKey("CurrentClassID")
+                        .OnDelete(DeleteBehavior.NoAction)
+                        .IsRequired();
+
+                    b.HasOne("InstituteWebApp.Models.Domain.Students", "Student")
+                        .WithMany()
+                        .HasForeignKey("StudentID")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("CurrentClass");
+
+                    b.Navigation("Student");
+                });
+
             modelBuilder.Entity("InstituteWebApp.Models.Domain.Admissions", b =>
                 {
+                    b.HasOne("InstituteWebApp.Models.Domain.Classes", "AdmittedClass")
+                        .WithMany()
+                        .HasForeignKey("AdmittedClassID")
+                        .OnDelete(DeleteBehavior.NoAction);
+
                     b.HasOne("InstituteWebApp.Models.Domain.Courses", "Course")
                         .WithMany("Admissions")
                         .HasForeignKey("CourseID")
@@ -916,6 +1816,8 @@ namespace InstituteWebAPI.Migrations
                         .HasForeignKey("StudentID")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
+
+                    b.Navigation("AdmittedClass");
 
                     b.Navigation("Course");
 
@@ -993,24 +1895,45 @@ namespace InstituteWebAPI.Migrations
                     b.Navigation("Term");
                 });
 
-            modelBuilder.Entity("InstituteWebApp.Models.Domain.Section", b =>
-                {
-                    b.HasOne("InstituteWebApp.Models.Domain.Term", "Term")
-                        .WithMany()
-                        .HasForeignKey("TermID");
-
-                    b.Navigation("Term");
-                });
-
             modelBuilder.Entity("InstituteWebApp.Models.Domain.FeeDue", b =>
                 {
                     b.HasOne("InstituteWebApp.Models.Domain.Admissions", "Admission")
-                        .WithMany()
+                        .WithMany("FeeDues")
                         .HasForeignKey("AdmissionId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
                     b.Navigation("Admission");
+                });
+
+            modelBuilder.Entity("InstituteWebApp.Models.Domain.Guardian", b =>
+                {
+                    b.HasOne("InstituteWebApp.Models.Domain.Students", "Student")
+                        .WithMany()
+                        .HasForeignKey("StudentID")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Student");
+                });
+
+            modelBuilder.Entity("InstituteWebApp.Models.Domain.MarkEditRequest", b =>
+                {
+                    b.HasOne("InstituteWebApp.Models.Domain.StudentMarks", "StudentMark")
+                        .WithMany()
+                        .HasForeignKey("StudentMarkID")
+                        .OnDelete(DeleteBehavior.NoAction)
+                        .IsRequired();
+
+                    b.HasOne("InstituteWebApp.Models.Domain.Teachers", "Teacher")
+                        .WithMany()
+                        .HasForeignKey("TeacherID")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("StudentMark");
+
+                    b.Navigation("Teacher");
                 });
 
             modelBuilder.Entity("InstituteWebApp.Models.Domain.Payment", b =>
@@ -1041,6 +1964,53 @@ namespace InstituteWebAPI.Migrations
                     b.Navigation("FeeDue");
 
                     b.Navigation("Payment");
+                });
+
+            modelBuilder.Entity("InstituteWebApp.Models.Domain.ResultApproval", b =>
+                {
+                    b.HasOne("InstituteWebApp.Models.Domain.CurrentClass", "CurrentClass")
+                        .WithMany()
+                        .HasForeignKey("CurrentClassID")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("InstituteWebApp.Models.Domain.Term", "Term")
+                        .WithMany()
+                        .HasForeignKey("TermID")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("CurrentClass");
+
+                    b.Navigation("Term");
+                });
+
+            modelBuilder.Entity("InstituteWebApp.Models.Domain.Scholarship", b =>
+                {
+                    b.HasOne("InstituteWebApp.Models.Domain.Admissions", "Admission")
+                        .WithMany("Scholarships")
+                        .HasForeignKey("AdmissionID")
+                        .OnDelete(DeleteBehavior.NoAction)
+                        .IsRequired();
+
+                    b.HasOne("InstituteWebApp.Models.Domain.Students", "Student")
+                        .WithMany()
+                        .HasForeignKey("StudentID")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Admission");
+
+                    b.Navigation("Student");
+                });
+
+            modelBuilder.Entity("InstituteWebApp.Models.Domain.Section", b =>
+                {
+                    b.HasOne("InstituteWebApp.Models.Domain.Term", "Term")
+                        .WithMany()
+                        .HasForeignKey("TermID");
+
+                    b.Navigation("Term");
                 });
 
             modelBuilder.Entity("InstituteWebApp.Models.Domain.Slots", b =>
@@ -1077,8 +2047,7 @@ namespace InstituteWebAPI.Migrations
                     b.HasOne("InstituteWebApp.Models.Domain.Teachers", "MarkedByTeacher")
                         .WithMany()
                         .HasForeignKey("MarkedByTeacherID")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
+                        .OnDelete(DeleteBehavior.NoAction);
 
                     b.HasOne("InstituteWebApp.Models.Domain.Students", "Student")
                         .WithMany()
@@ -1089,6 +2058,60 @@ namespace InstituteWebAPI.Migrations
                     b.Navigation("CurrentClass");
 
                     b.Navigation("MarkedByTeacher");
+
+                    b.Navigation("Student");
+                });
+
+            modelBuilder.Entity("InstituteWebApp.Models.Domain.StudentFeeHistory", b =>
+                {
+                    b.HasOne("InstituteWebApp.Models.Domain.Admissions", "Admission")
+                        .WithMany("FeeHistories")
+                        .HasForeignKey("AdmissionID")
+                        .OnDelete(DeleteBehavior.NoAction)
+                        .IsRequired();
+
+                    b.HasOne("InstituteWebApp.Models.Domain.Courses", "Course")
+                        .WithMany()
+                        .HasForeignKey("CourseID")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Admission");
+
+                    b.Navigation("Course");
+                });
+
+            modelBuilder.Entity("InstituteWebApp.Models.Domain.StudentLeaveRequest", b =>
+                {
+                    b.HasOne("InstituteWebApp.Models.Domain.Admissions", "Admission")
+                        .WithMany()
+                        .HasForeignKey("AdmissionID")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("InstituteWebApp.Models.Domain.CurrentClass", "CurrentClass")
+                        .WithMany()
+                        .HasForeignKey("CurrentClassID")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("InstituteWebApp.Models.Domain.Teachers", "RequestedByTeacher")
+                        .WithMany()
+                        .HasForeignKey("RequestedByTeacherID")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("InstituteWebApp.Models.Domain.Students", "Student")
+                        .WithMany()
+                        .HasForeignKey("StudentID")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Admission");
+
+                    b.Navigation("CurrentClass");
+
+                    b.Navigation("RequestedByTeacher");
 
                     b.Navigation("Student");
                 });
@@ -1185,7 +2208,48 @@ namespace InstituteWebAPI.Migrations
                     b.Navigation("Teacher");
                 });
 
+            modelBuilder.Entity("InstituteWebApp.Models.Domain.TeacherDailyAttendance", b =>
+                {
+                    b.HasOne("InstituteWebApp.Models.Domain.Teachers", "Teacher")
+                        .WithMany()
+                        .HasForeignKey("TeacherID")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Teacher");
+                });
+
+            modelBuilder.Entity("InstituteWebApp.Models.Domain.TeacherSalary", b =>
+                {
+                    b.HasOne("InstituteWebApp.Models.Domain.Teachers", "Teacher")
+                        .WithMany()
+                        .HasForeignKey("TeacherID")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Teacher");
+                });
+
             modelBuilder.Entity("InstituteWebApp.Models.Domain.TermMonthPassingMark", b =>
+                {
+                    b.HasOne("InstituteWebApp.Models.Domain.CurrentClass", "CurrentClass")
+                        .WithMany()
+                        .HasForeignKey("CurrentClassID")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("InstituteWebApp.Models.Domain.Term", "Term")
+                        .WithMany()
+                        .HasForeignKey("TermID")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("CurrentClass");
+
+                    b.Navigation("Term");
+                });
+
+            modelBuilder.Entity("InstituteWebApp.Models.Domain.TerminalPassingMark", b =>
                 {
                     b.HasOne("InstituteWebApp.Models.Domain.CurrentClass", "CurrentClass")
                         .WithMany()
@@ -1252,6 +2316,51 @@ namespace InstituteWebAPI.Migrations
                     b.Navigation("CurrentClass");
 
                     b.Navigation("TermMonth");
+                });
+
+            modelBuilder.Entity("InstituteWebApp.Models.Domain.TestSchedule", b =>
+                {
+                    b.HasOne("InstituteWebApp.Models.Domain.CurrentClass", "CurrentClass")
+                        .WithMany()
+                        .HasForeignKey("CurrentClassID")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("InstituteWebApp.Models.Domain.TermMonths", "TermMonth")
+                        .WithMany()
+                        .HasForeignKey("TermMonthID");
+
+                    b.Navigation("CurrentClass");
+
+                    b.Navigation("TermMonth");
+                });
+
+            modelBuilder.Entity("InstituteWebApp.Models.Domain.TimetableEntry", b =>
+                {
+                    b.HasOne("InstituteWebApp.Models.Domain.CurrentClass", "CurrentClass")
+                        .WithMany()
+                        .HasForeignKey("CurrentClassID")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("InstituteWebApp.Models.Domain.Slots", "Slot")
+                        .WithMany()
+                        .HasForeignKey("SlotID")
+                        .OnDelete(DeleteBehavior.NoAction)
+                        .IsRequired();
+
+                    b.Navigation("CurrentClass");
+
+                    b.Navigation("Slot");
+                });
+
+            modelBuilder.Entity("InstituteWebApp.Models.Domain.Admissions", b =>
+                {
+                    b.Navigation("FeeDues");
+
+                    b.Navigation("FeeHistories");
+
+                    b.Navigation("Scholarships");
                 });
 
             modelBuilder.Entity("InstituteWebApp.Models.Domain.Classes", b =>

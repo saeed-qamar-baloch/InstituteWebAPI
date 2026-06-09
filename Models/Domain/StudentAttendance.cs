@@ -29,9 +29,9 @@ namespace InstituteWebApp.Models.Domain
 
         public AttendanceStatus Status { get; set; } = AttendanceStatus.Present;
 
-        public Guid MarkedByTeacherID { get; set; }
+        public Guid? MarkedByTeacherID { get; set; }
         [ForeignKey(nameof(MarkedByTeacherID))]
-        public Teachers MarkedByTeacher { get; set; }
+        public Teachers? MarkedByTeacher { get; set; }
 
         public DateTime CreatedOn { get; set; } = DateTime.UtcNow;
         public DateTime? UpdatedOn { get; set; }

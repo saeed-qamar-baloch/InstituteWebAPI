@@ -8,6 +8,7 @@ namespace InstituteWebAPI.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
+    [Microsoft.AspNetCore.Authorization.Authorize(Roles = "Admin")]
     public class AdminSessionsController : ControllerBase
     {
         private readonly ISessionRepository sessionRepository;

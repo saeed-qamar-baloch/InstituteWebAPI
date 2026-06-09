@@ -31,6 +31,7 @@ namespace InstituteWebApp.Models.Domain
         public Term Term { get; set; }
         public DateTime CreatedOn { get; set; }
         public bool IsActive { get; set; }
+        public string? Room { get; set; }
 
         public List<Tests> Tests { get; set; }
         public List<ClassStudents> ClassStudents { get; set; }

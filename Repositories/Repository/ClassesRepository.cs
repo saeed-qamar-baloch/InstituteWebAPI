@@ -65,6 +65,7 @@ namespace InstituteWebAPI.Repositories.Repository
 
             exisitingClass.ClassName = classes.ClassName;
             exisitingClass.CourseID = classes.CourseID;
+            exisitingClass.Rank = classes.Rank;
             await _dbContext.SaveChangesAsync();
             return exisitingClass;
         }

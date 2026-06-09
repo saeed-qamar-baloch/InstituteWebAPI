@@ -73,8 +73,8 @@ namespace InstituteWebAPI.Controllers
             return Ok(mapper.Map<ClassesDto>(classDomainModel));
         }
 
-        [HttpDelete]
-        public async Task<IActionResult> Delete([FromBody] Guid id)
+        [HttpDelete("{id:Guid}")]
+        public async Task<IActionResult> Delete([FromRoute] Guid id)
         {
             var deleteClassDomain = await classesRepository.DeleteAsync(id);
 
@@ -84,6 +84,14 @@ namespace InstituteWebAPI.Controllers
             return Ok(mapper.Map<ClassesDto>(deleteClassDomain));
         }
 
+        /// <summary>Returns all classes that belong to a specific course.</summary>
+        [HttpGet("by-course/{courseId:Guid}")]
+        public async Task<IActionResult> GetByCourse([FromRoute] Guid courseId)
+        {
+            var all = await classesRepository.GetAllAsync();
+            var filtered = all.Where(c => c.CourseID == courseId).ToList();
+            return Ok(mapper.Map<List<ClassesDto>>(filtered));
+        }
 
     }
 }

@@ -24,6 +24,8 @@ namespace InstituteWebAPI.Controllers
         private readonly IMapper mapper;
         private readonly ITermContext termContext;
         private readonly InstituteWebAPI.Services.StudentMonthlyResults.IStudentMonthlyResultService studentMonthlyResultService;
+        private readonly IResultApprovalRepository resultApprovalRepository;
+        private readonly InstituteWebAPI.Services.Audit.IAuditService audit;
 
         public TeacherStudentMarksController(
             IStudentMarksRepository repository,
@@ -33,7 +35,9 @@ namespace InstituteWebAPI.Controllers
             RozhnInstituteDbContext dbContext,
             IMapper mapper,
             ITermContext termContext,
-            InstituteWebAPI.Services.StudentMonthlyResults.IStudentMonthlyResultService studentMonthlyResultService)
+            InstituteWebAPI.Services.StudentMonthlyResults.IStudentMonthlyResultService studentMonthlyResultService,
+            IResultApprovalRepository resultApprovalRepository,
+            InstituteWebAPI.Services.Audit.IAuditService audit)
         {
             this.repository = repository;
             this.testsRepository = testsRepository;
@@ -43,6 +47,8 @@ namespace InstituteWebAPI.Controllers
             this.mapper = mapper;
             this.termContext = termContext;
             this.studentMonthlyResultService = studentMonthlyResultService;
+            this.resultApprovalRepository = resultApprovalRepository;
+            this.audit = audit;
         }
 
         private async Task<Guid?> GetTeacherIdFromTokenAsync()
@@ -313,16 +319,19 @@ namespace InstituteWebAPI.Controllers
 
             var totalMarks = tests.Sum(t => t.TotalMarks);
 
-            // Passing marks are now scoped per (TermID, CurrentClassID, TermMonthID).
-            // We can get TermID from CurrentClass.
+            // Passing marks are scoped per (TermID, CurrentClassID, TermMonthID) — the
+            // per-month passing the teacher sets on the Passing Marks tab. We can get
+            // TermID from CurrentClass.
             var currentClass = await dbContext.CurrentClasses.AsNoTracking().FirstOrDefaultAsync(c => c.CurrentClassID == currentClassId);
             if (currentClass == null) return NotFound("Class not found");
 
             var passing = await dbContext.TermMonthPassingMarks
                 .AsNoTracking()
-                .Where(p => p.CurrentClassID == currentClassId && p.TermID == currentClass.TermID)
+                .Where(p => p.CurrentClassID == currentClassId
+                            && p.TermID == currentClass.TermID
+                            && p.TermMonthID == termMonthId)
                 .Select(p => (float?)p.PassingMarks)
-                .MaxAsync() ?? 0;
+                .FirstOrDefaultAsync() ?? 0;
 
             var classStudents = await dbContext.ClassStudents
                 .AsNoTracking()
@@ -417,10 +426,21 @@ namespace InstituteWebAPI.Controllers
                 };
             }).ToList();
 
-            // Determine pass/fail first (needed for positions)
+            // Determine pass/fail first (needed for positions).
+            // A student with no mark entered for ANY test that month is "Not Conducted"
+            // (mark not entered / NI / NC), not a Fail.
             foreach (var r in rows)
             {
-                r.Result = r.ObtainedTotal >= passing ? "Pass" : "Fail";
+                var hasAnyMark = tests.Any(t => r.MarksByTest.TryGetValue(t.TestID, out var v) && v.HasValue);
+                if (!hasAnyMark)
+                {
+                    r.Result = "Not Conducted";
+                    r.Grade  = "—";
+                }
+                else
+                {
+                    r.Result = r.ObtainedTotal >= passing ? "Pass" : "Fail";
+                }
             }
 
             // Position holders: only among passed students
@@ -529,6 +549,12 @@ namespace InstituteWebAPI.Controllers
                 if (!ownsTest) return Forbid();
             }
 
+            // Block edits if admin has locked the result for this class/term
+            var lockClass = await currentClassRepository.GetAsync(dto.CurrentClassID);
+            var lockTermId = lockClass?.TermID ?? Guid.Empty;
+            if (await resultApprovalRepository.IsApprovedAsync(lockTermId, dto.CurrentClassID))
+                return BadRequest("Result for this class has been approved and locked. Submit a MarkEditRequest to request changes.");
+
             var test = await testsRepository.GetAsync(dto.TestID);
             if (test == null) return NotFound("Test not found");
             if (test.CurrentClassID != dto.CurrentClassID) return BadRequest("Test does not belong to selected class.");
@@ -595,7 +621,26 @@ namespace InstituteWebAPI.Controllers
 
         // ---------------- Terminal Result workflow ----------------
 
-        // Quick check for UI: is terminal result created (settings exist) for class in active term
+        // ── DELETE terminal ── Admin only — wipes all terminal results for a class
+        // so admin can start fresh and reconfigure month inclusions.
+        [HttpDelete("terminal")]
+        [Authorize(Roles = "Admin")]
+        public async Task<IActionResult> DeleteTerminalResult([FromQuery] Guid currentClassId)
+        {
+            if (currentClassId == Guid.Empty) return BadRequest("currentClassId is required.");
+
+            var rows = await dbContext.TerminalResults
+                .Where(x => x.CurrentClassID == currentClassId)
+                .ToListAsync();
+
+            if (!rows.Any()) return Ok(new { Deleted = 0, Message = "No terminal results found." });
+
+            dbContext.TerminalResults.RemoveRange(rows);
+            await dbContext.SaveChangesAsync();
+            return Ok(new { Deleted = rows.Count, Message = "Terminal result deleted. You can now regenerate from scratch." });
+        }
+
+        // Quick check for UI: is terminal result created for this class?
         [HttpGet("terminal/exists")]
         [Authorize(Roles = "Admin,Teacher")]
         public async Task<IActionResult> TerminalExists([FromQuery] Guid currentClassId)
@@ -608,17 +653,19 @@ namespace InstituteWebAPI.Controllers
                 if (!owns) return Forbid();
             }
 
-            var activeTerm = await termContext.GetActiveTermAsync();
+            var existsClass = await currentClassRepository.GetAsync(currentClassId);
+            var existsTermId = existsClass?.TermID ?? Guid.Empty;
 
             var exists = await dbContext.TerminalResults
                 .AsNoTracking()
-                .AnyAsync(x => x.CurrentClassID == currentClassId && x.TermID == activeTerm.TermID);
+                .AnyAsync(x => x.CurrentClassID == currentClassId);
 
-            return Ok(new { CurrentClassID = currentClassId, TermID = activeTerm.TermID, Exists = exists });
+            return Ok(new { CurrentClassID = currentClassId, TermID = existsTermId, Exists = exists });
         }
 
-        // View terminal result for active term.
-        // If month test ids are not provided, infer them from saved terminal settings (TerminalResults) for the class.
+        // ── GET terminal ─────────────────────────────────────────────────────
+        // Returns the stored terminal result snapshot from the DB.
+        // All values are read from TerminalResults table (not re-computed).
         [HttpGet("terminal")]
         [Authorize(Roles = "Admin,Teacher")]
         public async Task<IActionResult> GetTerminalResult([FromQuery] Guid currentClassId)
@@ -631,164 +678,96 @@ namespace InstituteWebAPI.Controllers
                 if (!owns) return Forbid();
             }
 
-            var activeTerm = await termContext.GetActiveTermAsync();
+            var currentClass = await currentClassRepository.GetAsync(currentClassId);
+            if (currentClass == null) return NotFound("Class not found.");
+            var classTermId = currentClass.TermID ?? Guid.Empty;
 
-            // determine month1/2/3 based on class months ordering (active term)
-            var months = await dbContext.Tests
+            // Resolve month order from StudentMonthlyResults by CurrentClassID only.
+            // TermID is intentionally omitted here because results may have been
+            // generated under a different term reference than CurrentClass.TermID.
+            var months = await dbContext.StudentMonthlyResults
                 .AsNoTracking()
-                .Where(t => t.CurrentClassID == currentClassId && t.CurrentClass.TermID == activeTerm.TermID)
-                .Select(t => t.TermMonthID)
+                .Where(x => x.CurrentClassID == currentClassId)
+                .Select(x => x.TermMonthID)
                 .Distinct()
                 .Join(dbContext.TermMonths.AsNoTracking(), id => id, m => m.TermMonthID, (id, m) => new { m.TermMonthID, m.TermMonth })
                 .OrderBy(x => x.TermMonth)
                 .ToListAsync();
 
             if (months.Count < 3)
-                return BadRequest("Active term must have at least 3 months (tests) for terminal result.");
+                return BadRequest("This class needs monthly results in at least 3 months before terminal result can be viewed.");
 
             var m1MonthId = months[0].TermMonthID;
             var m2MonthId = months[1].TermMonthID;
             var m3MonthId = months[2].TermMonthID;
 
-            var classStudents = await dbContext.ClassStudents
+            // Load stored terminal results — CurrentClassID only
+            var stored = await dbContext.TerminalResults
                 .AsNoTracking()
-                .Include(cs => cs.Student)
-                .Where(cs => cs.CurrentClassID == currentClassId && cs.Status == "Enrolled")
-                .Select(cs => cs.Student)
-                .OrderBy(s => s.StudentName)
-                .ToListAsync();
-
-            var studentIds = classStudents.Select(s => s.StudentID).ToList();
-
-            // terminal rows (include flags + stored computed fields)
-            var settings = await dbContext.TerminalResults
-                .AsNoTracking()
-                .Where(x => x.TermID == activeTerm.TermID && x.CurrentClassID == currentClassId && studentIds.Contains(x.StudentID))
-                .ToListAsync();
-
-            if (settings.Count == 0)
-                return NotFound("No terminal result created for this class.");
-
-            var settingsByStudent = settings.ToDictionary(x => x.StudentID, x => x);
-
-            // monthly aggregates
-            var monthly = await dbContext.StudentMonthlyResults
-                .AsNoTracking()
-                .Where(x => x.TermID == activeTerm.TermID && x.CurrentClassID == currentClassId && studentIds.Contains(x.StudentID)
-                            && (x.TermMonthID == m1MonthId || x.TermMonthID == m2MonthId || x.TermMonthID == m3MonthId))
-                .Select(x => new { x.StudentID, x.TermMonthID, x.TotalMarks, x.ObtainedMarks })
-                .ToListAsync();
-
-            var monthlyByStudent = monthly
-                .GroupBy(x => x.StudentID)
-                .ToDictionary(g => g.Key, g => g.ToDictionary(x => x.TermMonthID, x => new { x.TotalMarks, x.ObtainedMarks }));
-
-            var monthTotals = monthly
-                .GroupBy(x => x.TermMonthID)
-                .ToDictionary(g => g.Key, g => g.First().TotalMarks);
-
-            var month1Total = monthTotals.TryGetValue(m1MonthId, out var mt1) ? mt1 : 0;
-            var month2Total = monthTotals.TryGetValue(m2MonthId, out var mt2) ? mt2 : 0;
-            var month3Total = monthTotals.TryGetValue(m3MonthId, out var mt3) ? mt3 : 0;
-
-            // Passing marks (same concept as monthly: threshold decides pass/fail before positions)
-            var passing = await dbContext.TermMonthPassingMarks
-                .AsNoTracking()
-                .Where(p => p.CurrentClassID == currentClassId && p.TermID == activeTerm.TermID)
-                .Select(p => (float?)p.PassingMarks)
-                .MaxAsync() ?? 0;
-
-            string GradeFromPercentage(float pct) => pct switch
-            {
-                >= 80 => "A",
-                >= 70 => "B",
-                >= 60 => "C",
-                >= 50 => "D",
-                >= 45 => "E",
-                _ => "F"
-            };
-
-            var rows = classStudents.Select(s =>
-            {
-                var set = settingsByStudent.TryGetValue(s.StudentID, out var st) ? st : null;
-                var include1 = set?.IncludeMonth1 ?? false;
-                var include2 = set?.IncludeMonth2 ?? false;
-
-                monthlyByStudent.TryGetValue(s.StudentID, out var map);
-                map ??= new();
-
-                map.TryGetValue(m1MonthId, out var m1);
-                map.TryGetValue(m2MonthId, out var m2);
-                map.TryGetValue(m3MonthId, out var m3);
-
-                var include1Eff = include1 && m1 != null;
-                var include2Eff = include2 && m2 != null;
-
-                var total = (m3?.TotalMarks ?? 0) + (include1Eff ? m1!.TotalMarks : 0) + (include2Eff ? m2!.TotalMarks : 0);
-                var obt = (m3?.ObtainedMarks ?? 0) + (include1Eff ? m1!.ObtainedMarks : 0) + (include2Eff ? m2!.ObtainedMarks : 0);
-                var pct = total <= 0 ? 0f : (obt / total * 100f);
-
-                return new TerminalStudentRowDto
-                {
-                    StudentID = s.StudentID,
-                    RegistrationNo = s.RegistrationNo,
-                    StudentName = s.StudentName,
-
-                    Month1Obtained = m1?.ObtainedMarks,
-                    Month1TotalMarks = m1?.TotalMarks,
-                    Month2Obtained = m2?.ObtainedMarks,
-                    Month2TotalMarks = m2?.TotalMarks,
-                    Month3Obtained = m3?.ObtainedMarks,
-                    Month3TotalMarks = m3?.TotalMarks,
-
-                    IncludeMonth1 = include1,
-                    IncludeMonth2 = include2,
-
-                    TotalObtained = obt,
-                    TotalMarksConsidered = total,
-                    Percentage = pct,
-                    Grade = total <= 0 ? "N/A" : GradeFromPercentage(pct),
-                    Result = obt >= passing ? "Pass" : "Fail",
-
-                    NI_Month1 = m1 == null,
-                    NI_Month2 = m2 == null,
-                    NI_Month3 = m3 == null
-                };
-            }).ToList();
-
-            // Position holders among passed students (same as monthly: 1st/2nd/3rd)
-            var passed = rows.Where(r => r.Result == "Pass")
+                .Include(r => r.Student)
+                .Where(x => x.CurrentClassID == currentClassId)
                 .OrderByDescending(r => r.Percentage)
-                .ThenBy(r => r.StudentName)
-                .ToList();
+                .ThenBy(r => r.Student.StudentName)
+                .ToListAsync();
 
-            for (var i = 0; i < passed.Count; i++)
+            if (stored.Count == 0)
+                return NotFound("No terminal result found for this class. Generate it first.");
+
+            // Class-level month totals for the header row (use stored values across all students)
+            var m1TotalHeader = stored.Where(r => r.IncludeMonth1).Select(r => r.Month1TotalMarks).FirstOrDefault();
+            var m2TotalHeader = stored.Where(r => r.IncludeMonth2).Select(r => r.Month2TotalMarks).FirstOrDefault();
+            var m3TotalHeader = stored.Select(r => r.Month3TotalMarks).FirstOrDefault();
+
+            var rows = stored.Select(r => new TerminalStudentRowDto
             {
-                if (i == 0) passed[i].Result = "1st";
-                else if (i == 1) passed[i].Result = "2nd";
-                else if (i == 2) passed[i].Result = "3rd";
-            }
+                StudentID            = r.StudentID,
+                RegistrationNo       = r.Student?.RegistrationNo,
+                StudentName          = r.Student?.StudentName,
+
+                // Return stored per-month snapshots
+                Month1Obtained       = r.IncludeMonth1 ? r.Month1ObtainedMarks : null,
+                Month1TotalMarks     = r.IncludeMonth1 ? r.Month1TotalMarks    : null,
+                Month2Obtained       = r.IncludeMonth2 ? r.Month2ObtainedMarks : null,
+                Month2TotalMarks     = r.IncludeMonth2 ? r.Month2TotalMarks    : null,
+                Month3Obtained       = r.Month3ObtainedMarks > 0 ? r.Month3ObtainedMarks : null,
+                Month3TotalMarks     = r.Month3TotalMarks    > 0 ? r.Month3TotalMarks    : null,
+
+                IncludeMonth1        = r.IncludeMonth1,
+                IncludeMonth2        = r.IncludeMonth2,
+
+                TotalObtained        = r.TotalObtained,
+                TotalMarksConsidered = r.TotalMarksConsidered,
+                Percentage           = r.Percentage,
+                Grade                = r.Grade ?? "",
+                Result               = r.Result ?? "",
+                IsResultManual       = r.IsResultManual,
+
+                NI_Month1 = r.Month1TotalMarks    <= 0,
+                NI_Month2 = r.Month2TotalMarks    <= 0,
+                NI_Month3 = r.Month3TotalMarks    <= 0,
+            }).ToList();
 
             return Ok(new TerminalResultDto
             {
-                CurrentClassID = currentClassId,
-                TermID = activeTerm.TermID,
+                CurrentClassID    = currentClassId,
+                TermID            = classTermId,
                 Month1TermMonthID = m1MonthId,
-                Month1TotalMarks = month1Total,
+                Month1TotalMarks  = m1TotalHeader,
                 Month2TermMonthID = m2MonthId,
-                Month2TotalMarks = month2Total,
+                Month2TotalMarks  = m2TotalHeader,
                 Month3TermMonthID = m3MonthId,
-                Month3TotalMarks = month3Total,
-                Students = rows.OrderByDescending(r => r.Percentage).ThenBy(r => r.StudentName).ToList()
+                Month3TotalMarks  = m3TotalHeader,
+                Students          = rows
             });
         }
 
-        // Create/update (upsert) the terminal inclusion settings to make it permanent.
+        // ── POST terminal/upsert ─────────────────────────────────────────────
+        // Generates (or regenerates) the terminal result for a class.
+        // Stores a full per-student snapshot: month obtained/total, grade, result.
         [HttpPost("terminal/upsert")]
         [Authorize(Roles = "Admin,Teacher")]
         public async Task<IActionResult> UpsertTerminal([FromBody] UpsertTerminalResultDto dto)
         {
-            // NOTE: class-only workflow (month1/month2 optional include flags, month3 compulsory inferred)
             if (!ModelState.IsValid) return BadRequest(ModelState);
 
             if (User.IsInRole("Teacher"))
@@ -797,28 +776,30 @@ namespace InstituteWebAPI.Controllers
                 if (!owns) return Forbid();
             }
 
-            var activeTerm = await termContext.GetActiveTermAsync();
-            if (dto.TermID != activeTerm.TermID)
-                return BadRequest("Terminal result can only be generated for active term.");
+            var upsertClass = await currentClassRepository.GetAsync(dto.CurrentClassID);
+            if (upsertClass == null) return NotFound("Class not found.");
+            var upsertTermId = upsertClass.TermID ?? Guid.Empty;
 
-            // determine month1/2/3 based on class months ordering
-            var months = await dbContext.Tests
+            if (await resultApprovalRepository.IsApprovedAsync(upsertTermId, dto.CurrentClassID))
+                return BadRequest("Result for this class has been approved and locked. Submit a MarkEditRequest to request changes.");
+
+            // Resolve month order by CurrentClassID only (no TermID filter — see GetTerminalResult comment)
+            var months = await dbContext.StudentMonthlyResults
                 .AsNoTracking()
-                .Where(t => t.CurrentClassID == dto.CurrentClassID && t.CurrentClass.TermID == activeTerm.TermID)
-                .Select(t => t.TermMonthID)
+                .Where(x => x.CurrentClassID == dto.CurrentClassID)
+                .Select(x => x.TermMonthID)
                 .Distinct()
                 .Join(dbContext.TermMonths.AsNoTracking(), id => id, m => m.TermMonthID, (id, m) => new { m.TermMonthID, m.TermMonth })
                 .OrderBy(x => x.TermMonth)
                 .ToListAsync();
 
             if (months.Count < 3)
-                return BadRequest("Active term must have at least 3 months (tests) for terminal result.");
+                return BadRequest("This class needs monthly results in at least 3 months before terminal result can be generated.");
 
             var m1MonthId = months[0].TermMonthID;
             var m2MonthId = months[1].TermMonthID;
             var m3MonthId = months[2].TermMonthID;
 
-            // Ensure students are enrolled
             var studentIds = dto.Students.Select(s => s.StudentID).Distinct().ToList();
             var allowedStudents = await dbContext.ClassStudents
                 .AsNoTracking()
@@ -829,10 +810,11 @@ namespace InstituteWebAPI.Controllers
             if (allowedStudents.Count != studentIds.Count)
                 return BadRequest("One or more students are not enrolled in the selected class.");
 
-            // Load monthly aggregates
+            // Load monthly aggregates — filter by CurrentClassID only (TermID omitted intentionally)
             var monthly = await dbContext.StudentMonthlyResults
                 .AsNoTracking()
-                .Where(x => x.TermID == dto.TermID && x.CurrentClassID == dto.CurrentClassID && studentIds.Contains(x.StudentID)
+                .Where(x => x.CurrentClassID == dto.CurrentClassID
+                            && studentIds.Contains(x.StudentID)
                             && (x.TermMonthID == m1MonthId || x.TermMonthID == m2MonthId || x.TermMonthID == m3MonthId))
                 .Select(x => new { x.StudentID, x.TermMonthID, x.TotalMarks, x.ObtainedMarks })
                 .ToListAsync();
@@ -841,20 +823,35 @@ namespace InstituteWebAPI.Controllers
                 .GroupBy(x => x.StudentID)
                 .ToDictionary(g => g.Key, g => g.ToDictionary(x => x.TermMonthID, x => new { x.TotalMarks, x.ObtainedMarks }));
 
-            // Passing marks
-            var passing = await dbContext.TermMonthPassingMarks
+            // Passing percentage threshold (field reused from PassingMarks — now treated as %)
+            var passingPct = await dbContext.TerminalPassingMarks
                 .AsNoTracking()
-                .Where(p => p.CurrentClassID == dto.CurrentClassID && p.TermID == dto.TermID)
+                .Where(p => p.CurrentClassID == dto.CurrentClassID)
                 .Select(p => (float?)p.PassingMarks)
-                .MaxAsync() ?? 0;
+                .FirstOrDefaultAsync() ?? 0f;
+
+            // Load grade criteria from DB (sorted highest first so first match wins)
+            var gradeCriterias = await dbContext.GradeCriterias
+                .AsNoTracking()
+                .OrderByDescending(g => g.MinPercentage)
+                .ToListAsync();
+
+            // Fallback if no grade criteria configured
+            string GradeFromPct(float pct)
+            {
+                if (pct <= 0) return "F";
+                foreach (var gc in gradeCriterias)
+                    if (pct >= gc.MinPercentage) return gc.GradeLabel;
+                return "F";
+            }
 
             var existing = await dbContext.TerminalResults
-                .Where(x => x.TermID == dto.TermID && x.CurrentClassID == dto.CurrentClassID && studentIds.Contains(x.StudentID))
+                .Where(x => x.CurrentClassID == dto.CurrentClassID && studentIds.Contains(x.StudentID))
                 .ToListAsync();
 
             var existingByStudent = existing.ToDictionary(x => x.StudentID, x => x);
 
-            var computed = new List<(Guid StudentID, float Pct, string Result)>();
+            var computed = new List<(Guid StudentID, float Pct, float Obt, bool Passed)>();
 
             foreach (var s in dto.Students)
             {
@@ -865,60 +862,97 @@ namespace InstituteWebAPI.Controllers
                 map.TryGetValue(m2MonthId, out var m2);
                 map.TryGetValue(m3MonthId, out var m3);
 
-                var m3Total = m3?.TotalMarks ?? 0;
-                var m3Obt = m3?.ObtainedMarks ?? 0;
-
                 var include1 = s.IncludeMonth1 && m1 != null;
                 var include2 = s.IncludeMonth2 && m2 != null;
 
-                var total = m3Total + (include1 ? m1!.TotalMarks : 0) + (include2 ? m2!.TotalMarks : 0);
-                var obt = m3Obt + (include1 ? m1!.ObtainedMarks : 0) + (include2 ? m2!.ObtainedMarks : 0);
-                var pct = total <= 0 ? 0f : (obt / total * 100f);
+                // Per-month snapshots
+                var m1Obt   = include1 ? m1!.ObtainedMarks : 0f;
+                var m1Total = include1 ? m1!.TotalMarks     : 0f;
+                var m2Obt   = include2 ? m2!.ObtainedMarks : 0f;
+                var m2Total = include2 ? m2!.TotalMarks     : 0f;
+                var m3Obt   = m3?.ObtainedMarks ?? 0f;
+                var m3Total = m3?.TotalMarks     ?? 0f;
 
-                var res = obt >= passing ? "Pass" : "Fail";
-                computed.Add((s.StudentID, pct, res));
+                var totalObt   = m1Obt   + m2Obt   + m3Obt;
+                var totalMarks = m1Total + m2Total + m3Total;
+                var pct        = totalMarks <= 0 ? 0f : (totalObt / totalMarks * 100f);
+                var grade      = totalMarks <= 0 ? "N/A" : GradeFromPct(pct);
 
-                if (existingByStudent.TryGetValue(s.StudentID, out var row))
+                // Pass/Fail based on PERCENTAGE, not raw marks
+                var passed = pct >= passingPct;
+                var res    = passed ? "Pass" : "Fail";
+
+                existingByStudent.TryGetValue(s.StudentID, out var existingRow);
+                var isManual = existingRow?.IsResultManual ?? false;
+
+                // Manually-overridden results keep their position out of auto ranking.
+                if (!isManual)
+                    computed.Add((s.StudentID, pct, totalObt, passed));
+
+                if (existingRow != null)
                 {
-                    row.IncludeMonth1 = include1;
-                    row.IncludeMonth2 = include2;
-                    row.TotalMarksConsidered = total;
-                    row.TotalObtained = obt;
-                    row.Percentage = pct;
-                    row.Result = res;
-                    row.UpdatedOn = DateTime.UtcNow;
+                    var row = existingRow;
+                    // Full snapshot update (marks always refresh, even for manual rows)
+                    row.IncludeMonth1        = include1;
+                    row.IncludeMonth2        = include2;
+                    row.Month1ObtainedMarks  = m1Obt;
+                    row.Month1TotalMarks     = m1Total;
+                    row.Month2ObtainedMarks  = m2Obt;
+                    row.Month2TotalMarks     = m2Total;
+                    row.Month3ObtainedMarks  = m3Obt;
+                    row.Month3TotalMarks     = m3Total;
+                    row.TotalMarksConsidered = totalMarks;
+                    row.TotalObtained        = totalObt;
+                    row.Percentage           = pct;
+                    row.Grade                = grade;
+                    // Preserve admin-set result; only auto-compute when not manual.
+                    if (!isManual)
+                        row.Result           = res;
+                    row.UpdatedOn            = DateTime.UtcNow;
                 }
                 else
                 {
                     dbContext.TerminalResults.Add(new TerminalResult
                     {
-                        TerminalResultID = Guid.NewGuid(),
-                        TermID = dto.TermID,
-                        CurrentClassID = dto.CurrentClassID,
-                        StudentID = s.StudentID,
-                        Month3TestID = Guid.Empty,
-                        Month1TestID = null,
-                        Month2TestID = null,
-                        IncludeMonth1 = include1,
-                        IncludeMonth2 = include2,
-                        TotalMarksConsidered = total,
-                        TotalObtained = obt,
-                        Percentage = pct,
-                        Result = res,
-                        CreatedOn = DateTime.UtcNow
+                        TerminalResultID     = Guid.NewGuid(),
+                        TermID               = upsertTermId,
+                        CurrentClassID       = dto.CurrentClassID,
+                        StudentID            = s.StudentID,
+                        Month3TestID         = m3MonthId,
+                        Month1TestID         = include1 ? m1MonthId : null,
+                        Month2TestID         = include2 ? m2MonthId : null,
+                        IncludeMonth1        = include1,
+                        IncludeMonth2        = include2,
+                        Month1ObtainedMarks  = m1Obt,
+                        Month1TotalMarks     = m1Total,
+                        Month2ObtainedMarks  = m2Obt,
+                        Month2TotalMarks     = m2Total,
+                        Month3ObtainedMarks  = m3Obt,
+                        Month3TotalMarks     = m3Total,
+                        TotalMarksConsidered = totalMarks,
+                        TotalObtained        = totalObt,
+                        Percentage           = pct,
+                        Grade                = grade,
+                        Result               = res,
+                        CreatedOn            = DateTime.UtcNow
                     });
                 }
             }
 
-            // Position holders among passed students
-            var passed = computed.Where(x => x.Result == "Pass").OrderByDescending(x => x.Pct).ToList();
+            // Assign rank positions ONLY to students who passed (percentage >= passingPct)
+            // Students who fail never get a position — their result stays "Fail"
+            var passedList = computed.Where(x => x.Passed)
+                                     .OrderByDescending(x => x.Pct)
+                                     .ThenByDescending(x => x.Obt)
+                                     .ToList();
 
             void SetPos(int idx, string pos)
             {
-                if (passed.Count <= idx) return;
-                var id = passed[idx].StudentID;
+                if (passedList.Count <= idx) return;
+                var id = passedList[idx].StudentID;
                 if (existingByStudent.TryGetValue(id, out var row)) row.Result = pos;
-                var added = dbContext.TerminalResults.Local.FirstOrDefault(x => x.StudentID == id && x.TermID == dto.TermID && x.CurrentClassID == dto.CurrentClassID);
+                var added = dbContext.TerminalResults.Local
+                    .FirstOrDefault(x => x.StudentID == id && x.CurrentClassID == dto.CurrentClassID);
                 if (added != null) added.Result = pos;
             }
 
@@ -927,7 +961,71 @@ namespace InstituteWebAPI.Controllers
             SetPos(2, "3rd");
 
             await dbContext.SaveChangesAsync();
-            return Ok("Terminal result saved.");
+            await audit.LogAsync("Marks", "Terminal Result Generated",
+                $"Generated/updated terminal result for {dto.Students.Count} student(s).", "CurrentClass", dto.CurrentClassID.ToString());
+            return Ok(new { Message = "Terminal result saved.", StudentCount = dto.Students.Count });
+        }
+
+        // ── PUT terminal/result ──────────────────────────────────────────────
+        // Admin manually overrides a single student's terminal result status
+        // (e.g. force a "Fail" to "Promoted", or revert back to the computed value).
+        public class SetTerminalResultDto
+        {
+            [System.ComponentModel.DataAnnotations.Required]
+            public Guid CurrentClassID { get; set; }
+
+            [System.ComponentModel.DataAnnotations.Required]
+            public Guid StudentID { get; set; }
+
+            /// <summary>New result label, e.g. Pass, Fail, 1st, 2nd, 3rd, Promoted.
+            /// Send null/empty together with Reset=true to clear the manual override
+            /// and revert to the auto-computed value on next regeneration.</summary>
+            public string? Result { get; set; }
+
+            /// <summary>When true, clears the manual flag (result becomes auto again).</summary>
+            public bool Reset { get; set; }
+        }
+
+        [HttpPut("terminal/result")]
+        [Authorize(Roles = "Admin")]
+        public async Task<IActionResult> SetTerminalResult([FromBody] SetTerminalResultDto dto)
+        {
+            if (!ModelState.IsValid) return BadRequest(ModelState);
+
+            var row = await dbContext.TerminalResults
+                .FirstOrDefaultAsync(x => x.CurrentClassID == dto.CurrentClassID && x.StudentID == dto.StudentID);
+
+            if (row == null)
+                return NotFound("No terminal result found for this student in this class. Generate it first.");
+
+            if (dto.Reset)
+            {
+                row.IsResultManual = false;
+                // Re-derive a sensible auto value from the stored snapshot percentage.
+                var passingPct = await dbContext.TerminalPassingMarks
+                    .AsNoTracking()
+                    .Where(p => p.CurrentClassID == dto.CurrentClassID)
+                    .Select(p => (float?)p.PassingMarks)
+                    .FirstOrDefaultAsync() ?? 0f;
+                row.Result = row.Percentage >= passingPct ? "Pass" : "Fail";
+            }
+            else
+            {
+                if (string.IsNullOrWhiteSpace(dto.Result))
+                    return BadRequest("Result is required unless Reset is true.");
+
+                row.Result = dto.Result.Trim();
+                row.IsResultManual = true;
+            }
+
+            row.UpdatedOn = DateTime.UtcNow;
+            await dbContext.SaveChangesAsync();
+
+            await audit.LogAsync("Marks", "Terminal Result Changed",
+                $"Result for student set to \"{row.Result}\"{(dto.Reset ? " (reset to auto)" : " (manual override)")}.",
+                "Student", row.StudentID.ToString());
+
+            return Ok(new { row.StudentID, row.CurrentClassID, row.Result, row.IsResultManual });
         }
 
         public class BulkUpsertStudentMarksDto
@@ -977,20 +1075,23 @@ namespace InstituteWebAPI.Controllers
                 if (!owns) return Forbid();
             }
 
-            var activeTerm = await termContext.GetActiveTermAsync();
+            // Use the class's own term (not the "active" term)
+            var editClass = await currentClassRepository.GetAsync(currentClassId);
+            if (editClass == null) return NotFound("Class not found.");
+            var editTermId = editClass.TermID ?? Guid.Empty;
 
-            // Determine month1/2/3 based on term-month ordering among tests in this class+term
-            var months = await dbContext.Tests
+            // Determine month1/2/3 by CurrentClassID only (no TermID filter — see GetTerminalResult comment)
+            var months = await dbContext.StudentMonthlyResults
                 .AsNoTracking()
-                .Where(t => t.CurrentClassID == currentClassId && t.CurrentClass.TermID == activeTerm.TermID)
-                .Select(t => t.TermMonthID)
+                .Where(x => x.CurrentClassID == currentClassId)
+                .Select(x => x.TermMonthID)
                 .Distinct()
                 .Join(dbContext.TermMonths.AsNoTracking(), id => id, m => m.TermMonthID, (id, m) => new { m.TermMonthID, m.TermMonth })
                 .OrderBy(x => x.TermMonth)
                 .ToListAsync();
 
             if (months.Count < 3)
-                return NotFound("Months/tests not found for this class in active term.");
+                return NotFound("This class needs monthly results in at least 3 months before terminal result can be generated.");
 
             var m1MonthId = months[0].TermMonthID;
             var m2MonthId = months[1].TermMonthID;
@@ -1006,18 +1107,18 @@ namespace InstituteWebAPI.Controllers
 
             var studentIds = classStudents.Select(s => s.StudentID).ToList();
 
-            // Existing terminal settings (include flags)
+            // Existing terminal settings (include flags) — CurrentClassID only
             var settings = await dbContext.TerminalResults
                 .AsNoTracking()
-                .Where(x => x.TermID == activeTerm.TermID && x.CurrentClassID == currentClassId && studentIds.Contains(x.StudentID))
+                .Where(x => x.CurrentClassID == currentClassId && studentIds.Contains(x.StudentID))
                 .ToListAsync();
 
             var settingsByStudent = settings.ToDictionary(x => x.StudentID, x => x);
 
-            // Monthly aggregates from StudentMonthlyResults
+            // Monthly aggregates — CurrentClassID only (TermID omitted intentionally)
             var monthly = await dbContext.StudentMonthlyResults
                 .AsNoTracking()
-                .Where(x => x.TermID == activeTerm.TermID && x.CurrentClassID == currentClassId && studentIds.Contains(x.StudentID)
+                .Where(x => x.CurrentClassID == currentClassId && studentIds.Contains(x.StudentID)
                             && (x.TermMonthID == m1MonthId || x.TermMonthID == m2MonthId || x.TermMonthID == m3MonthId))
                 .Select(x => new { x.StudentID, x.TermMonthID, x.TotalMarks, x.ObtainedMarks })
                 .ToListAsync();
@@ -1064,7 +1165,7 @@ namespace InstituteWebAPI.Controllers
             return Ok(new TerminalResultDto
             {
                 CurrentClassID = currentClassId,
-                TermID = activeTerm.TermID,
+                TermID = editTermId,
                 Month1TermMonthID = m1MonthId,
                 Month2TermMonthID = m2MonthId,
                 Month3TermMonthID = m3MonthId,

@@ -9,6 +9,7 @@ namespace InstituteWebAPI.Models.DTO.Classes
         public Guid ClassID { get; set; }
 
         public string ClassName { get; set; }
+        public int Rank { get; set; }
         public CourseDto Course { get; set; }
     }
 }

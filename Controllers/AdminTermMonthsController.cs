@@ -2,6 +2,7 @@
 using InstituteWebAPI.Models.DTO.TermMonths;
 using InstituteWebAPI.Repositories.IRepository;
 using InstituteWebApp.Models.Domain;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 
@@ -9,6 +10,7 @@ namespace InstituteWebAPI.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
+    [Authorize(Roles = "Admin,Teacher")]
     public class AdminTermMonthsController : ControllerBase
     {
         private readonly ITermMonthsRepository termMonthsRepository;

@@ -60,6 +60,17 @@ namespace InstituteWebAPI.Repositories.Repository
                 .ToListAsync();
         }
 
+        public async Task<List<FeeDue>> GetTrackedMonthlyDuesInRangeAsync(Guid admissionId, DateTime startMonth, DateTime endMonth)
+        {
+            return await dbContext.FeeDues
+                .Include(d => d.PaymentDetails)
+                .Where(d => d.AdmissionId == admissionId
+                            && d.FeeType == FeeDueType.Monthly
+                            && d.FeeMonth >= startMonth
+                            && d.FeeMonth <= endMonth)
+                .ToListAsync();
+        }
+
         public async Task<FeeDue?> GetExistingOneTimeFeeDueAsync(Guid admissionId, FeeDueType feeType)
         {
             return await dbContext.FeeDues
@@ -103,6 +114,7 @@ namespace InstituteWebAPI.Repositories.Repository
                 existing.LateFeeAmount = settings.LateFeeAmount;
                 existing.AdmissionFeeAmount = settings.AdmissionFeeAmount;
                 existing.CardFeeAmount = settings.CardFeeAmount;
+                existing.FeeStartMonth = settings.FeeStartMonth;
                 existing.UpdatedAt = settings.UpdatedAt;
             }
         }
@@ -172,6 +184,54 @@ namespace InstituteWebAPI.Repositories.Repository
 
             return await query
                 .OrderBy(s => s.StudentName)
+                .ToListAsync();
+        }
+
+        public async Task<List<Admissions>> GetAllActiveAdmissionsAsync()
+        {
+            return await dbContext.Admissions
+                .AsNoTracking()
+                .Where(a => a.IsActive)
+                .ToListAsync();
+        }
+
+        public async Task<List<ClassStudents>> GetEnrolledStudentsForMatrixAsync(
+            Guid termId, Guid? classId, Guid? teacherId)
+        {
+            var query = dbContext.ClassStudents
+                .AsNoTracking()
+                .Include(cs => cs.Student)
+                .Include(cs => cs.CurrentClass)
+                    .ThenInclude(cc => cc.Class)
+                .Include(cs => cs.CurrentClass)
+                    .ThenInclude(cc => cc.Teacher)
+                .Include(cs => cs.CurrentClass)
+                    .ThenInclude(cc => cc.Section)
+                .Where(cs => cs.CurrentClass.TermID == termId);
+
+            if (classId.HasValue)
+                query = query.Where(cs => cs.CurrentClass.ClassID == classId.Value);
+
+            if (teacherId.HasValue)
+                query = query.Where(cs => cs.CurrentClass.TeacherID == teacherId.Value);
+
+            return await query
+                .OrderBy(cs => cs.CurrentClass.Class.ClassName)
+                .ThenBy(cs => cs.Student.StudentName)
+                .ToListAsync();
+        }
+
+        public async Task<List<FeeDue>> GetMonthlyDuesForMatrixAsync(
+            IEnumerable<Guid> admissionIds, DateTime startMonth, DateTime endMonth)
+        {
+            return await dbContext.FeeDues
+                .AsNoTracking()
+                .Include(d => d.PaymentDetails)
+                .Where(d => admissionIds.Contains(d.AdmissionId)
+                         && d.FeeType == FeeDueType.Monthly
+                         && d.FeeMonth.HasValue
+                         && d.FeeMonth.Value >= startMonth
+                         && d.FeeMonth.Value <= endMonth)
                 .ToListAsync();
         }
     }

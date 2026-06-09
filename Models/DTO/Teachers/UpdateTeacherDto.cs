@@ -3,7 +3,7 @@
 public class UpdateTeacherDto
 {
     public Guid TeacherID { get; set; }
-    public string RegistrationNo { get; set; }
+    public string? RegistrationNo { get; set; }
     public string TeacherName { get; set; }
     public string FatherName { get; set; }
     public string Gender { get; set; }

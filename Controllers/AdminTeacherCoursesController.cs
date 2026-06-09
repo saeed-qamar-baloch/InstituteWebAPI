@@ -8,6 +8,7 @@ namespace InstituteWebAPI.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
+    [Microsoft.AspNetCore.Authorization.Authorize(Roles = "Admin")]
     public class AdminTeacherCoursesController : ControllerBase
     {
         private readonly ITeacherCoursesRepository repo;
@@ -32,6 +33,13 @@ namespace InstituteWebAPI.Controllers
             var data = await repo.GetAsync(id);
             if (data == null) return NotFound();
             return Ok(mapper.Map<TeacherCourseDto>(data));
+        }
+
+        [HttpGet("by-teacher/{teacherId:Guid}")]
+        public async Task<IActionResult> GetByTeacher([FromRoute] Guid teacherId)
+        {
+            var data = await repo.GetByTeacherAsync(teacherId);
+            return Ok(mapper.Map<List<TeacherCourseDto>>(data));
         }
 
         [HttpPost]

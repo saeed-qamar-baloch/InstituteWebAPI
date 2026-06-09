@@ -11,7 +11,8 @@ namespace InstituteWebApp.Models.Domain
     {
         Unpaid = 1,
         Paid = 2,
-        Partial = 3
+        Partial = 3,
+        Waived = 4
     }
 
     public enum PaymentMethod

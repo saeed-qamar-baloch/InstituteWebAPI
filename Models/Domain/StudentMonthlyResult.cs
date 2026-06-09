@@ -30,6 +30,10 @@ namespace InstituteWebApp.Models.Domain
         public float ObtainedMarks { get; set; }
         public float Percentage { get; set; }
 
+        // Optional status note for the month, e.g. "Not Conducted" when the
+        // student has no mark / NI / NC for that month. Null = a normal scored month.
+        public string? Status { get; set; }
+
         public DateTime CreatedOn { get; set; } = DateTime.UtcNow;
         public DateTime? UpdatedOn { get; set; }
     }
