@@ -1,0 +1,60 @@
+name: Deploy Rozhn API to Hetzner
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout source code
+        uses: actions/checkout@v4
+
+      - name: Setup .NET 10
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+
+      - name: Restore dependencies
+        run: dotnet restore ./InstituteWebAPI.csproj
+
+      - name: Build API
+        run: dotnet build ./InstituteWebAPI.csproj -c Release --no-restore
+
+      - name: Publish API
+        run: dotnet publish ./InstituteWebAPI.csproj -c Release -o ./publish --no-build
+
+      - name: Setup SSH
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/rozhn_deploy
+          chmod 600 ~/.ssh/rozhn_deploy
+          ssh-keyscan -H ${{ secrets.SERVER_HOST }} >> ~/.ssh/known_hosts
+
+      - name: Upload API to server
+        run: |
+          ssh -i ~/.ssh/rozhn_deploy ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }} "rm -rf /tmp/rozhn-api && mkdir -p /tmp/rozhn-api"
+          scp -i ~/.ssh/rozhn_deploy -r ./publish/* ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }}:/tmp/rozhn-api/
+
+      - name: Deploy and restart API
+        run: |
+          ssh -i ~/.ssh/rozhn_deploy ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }} 'bash -s' << 'EOF'
+          set -e
+
+          mkdir -p /var/www/rozhn-api
+
+          systemctl stop rozhn-api || true
+
+          rm -rf /var/www/rozhn-api/*
+          cp -r /tmp/rozhn-api/* /var/www/rozhn-api/
+
+          chown -R www-data:www-data /var/www/rozhn-api
+
+          systemctl daemon-reload
+          systemctl restart rozhn-api
+          systemctl status rozhn-api --no-pager
+
+          EOF
