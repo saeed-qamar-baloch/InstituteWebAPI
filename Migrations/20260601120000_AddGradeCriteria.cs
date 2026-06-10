@@ -23,18 +23,15 @@ namespace InstituteWebAPI.Migrations
                 },
                 constraints: table => table.PrimaryKey("PK_GradeCriterias", x => x.GradeCriteriaID));
 
-            // Seed defaults
-            migrationBuilder.InsertData("GradeCriterias",
-                new[] { "GradeCriteriaID","GradeLabel","MinPercentage","Description","DisplayOrder" },
-                new object[,]
-                {
-                    { "a1000000-0000-0000-0000-000000000001", "A", 80f, "Excellent",     1 },
-                    { "a1000000-0000-0000-0000-000000000002", "B", 70f, "Very Good",     2 },
-                    { "a1000000-0000-0000-0000-000000000003", "C", 60f, "Good",          3 },
-                    { "a1000000-0000-0000-0000-000000000004", "D", 50f, "Pass",          4 },
-                    { "a1000000-0000-0000-0000-000000000005", "E", 45f, "Marginal Pass", 5 },
-                    { "a1000000-0000-0000-0000-000000000006", "F",  0f, "Fail",          6 },
-                });
+            // Seed defaults — use raw SQL to avoid EF model-lookup requirement
+            migrationBuilder.Sql(@"
+                INSERT INTO [GradeCriterias] ([GradeCriteriaID],[GradeLabel],[MinPercentage],[Description],[DisplayOrder]) VALUES
+                ('a1000000-0000-0000-0000-000000000001','A',80,'Excellent',1),
+                ('a1000000-0000-0000-0000-000000000002','B',70,'Very Good',2),
+                ('a1000000-0000-0000-0000-000000000003','C',60,'Good',3),
+                ('a1000000-0000-0000-0000-000000000004','D',50,'Pass',4),
+                ('a1000000-0000-0000-0000-000000000005','E',45,'Marginal Pass',5),
+                ('a1000000-0000-0000-0000-000000000006','F',0,'Fail',6);");
         }
 
         protected override void Down(MigrationBuilder migrationBuilder)
