@@ -68,7 +68,7 @@ namespace InstituteWebAPI.Migrations
                 column: "AdmissionID",
                 principalTable: "Admissions",
                 principalColumn: "AdmissionID",
-                onDelete: ReferentialAction.Cascade);
+                onDelete: ReferentialAction.NoAction);
         }
 
         /// <inheritdoc />
