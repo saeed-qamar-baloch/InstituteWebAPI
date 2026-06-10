@@ -1,9 +1,12 @@
+using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Migrations;
 
 #nullable disable
 
 namespace InstituteWebAPI.Migrations
 {
+    [DbContext(typeof(InstituteWebAPI.Data.RozhnInstituteDbContext))]
+    [Migration("20260601120000_AddGradeCriteria")]
     public partial class AddGradeCriteria : Migration
     {
         protected override void Up(MigrationBuilder migrationBuilder)

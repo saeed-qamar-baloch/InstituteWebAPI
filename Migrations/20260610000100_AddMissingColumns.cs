@@ -1,4 +1,5 @@
 using System;
+using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Migrations;
 
 #nullable disable
@@ -18,6 +19,8 @@ namespace InstituteWebAPI.Migrations
     /// so existing prod databases simply have these migration rows inserted
     /// without re-adding the columns — see the Up() implementation).
     /// </summary>
+    [DbContext(typeof(InstituteWebAPI.Data.RozhnInstituteDbContext))]
+    [Migration("20260610000100_AddMissingColumns")]
     public partial class AddMissingColumns : Migration
     {
         protected override void Up(MigrationBuilder migrationBuilder)

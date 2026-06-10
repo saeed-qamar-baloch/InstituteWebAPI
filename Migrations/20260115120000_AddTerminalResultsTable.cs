@@ -1,10 +1,13 @@
 using System;
+using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Migrations;
 
 #nullable disable
 
 namespace InstituteWebAPI.Migrations
 {
+    [DbContext(typeof(InstituteWebAPI.Data.RozhnInstituteDbContext))]
+    [Migration("20260115120000_AddTerminalResultsTable")]
     public partial class AddTerminalResultsTable : Migration
     {
         protected override void Up(MigrationBuilder migrationBuilder)

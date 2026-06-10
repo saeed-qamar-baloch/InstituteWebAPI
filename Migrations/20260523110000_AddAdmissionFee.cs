@@ -1,3 +1,4 @@
+using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Migrations;
 
 #nullable disable
@@ -5,6 +6,8 @@ using Microsoft.EntityFrameworkCore.Migrations;
 namespace InstituteWebAPI.Migrations
 {
     /// <inheritdoc />
+    [DbContext(typeof(InstituteWebAPI.Data.RozhnInstituteDbContext))]
+    [Migration("20260523110000_AddAdmissionFee")]
     public partial class AddAdmissionFee : Migration
     {
         /// <inheritdoc />

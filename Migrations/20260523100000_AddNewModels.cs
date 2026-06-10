@@ -1,11 +1,13 @@
 using System;
+using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Migrations;
 
 #nullable disable
 
 namespace InstituteWebAPI.Migrations
 {
-    /// <inheritdoc />
+    [DbContext(typeof(InstituteWebAPI.Data.RozhnInstituteDbContext))]
+    [Migration("20260523100000_AddNewModels")]
     public partial class AddNewModels : Migration
     {
         /// <inheritdoc />
