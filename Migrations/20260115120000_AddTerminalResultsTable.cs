@@ -1,13 +1,12 @@
 using System;
-using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Migrations;
 
 #nullable disable
 
 namespace InstituteWebAPI.Migrations
 {
-    [DbContext(typeof(InstituteWebAPI.Data.RozhnInstituteDbContext))]
-    [Migration("20260115120000_AddTerminalResultsTable")]
+    // NOTE: No [Migration] attribute — this migration is intentionally invisible to EF Core.
+    // RefreshTerminalModels (20260115205256) supersedes it by creating TerminalResults directly.
     public partial class AddTerminalResultsTable : Migration
     {
         protected override void Up(MigrationBuilder migrationBuilder)
