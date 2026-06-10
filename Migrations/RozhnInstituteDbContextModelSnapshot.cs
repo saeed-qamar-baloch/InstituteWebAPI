@@ -113,6 +113,9 @@ namespace InstituteWebAPI.Migrations
                     b.Property<DateTime>("RequestDate")
                         .HasColumnType("datetime2");
 
+                    b.Property<Guid?>("RequestedByTeacherID")
+                        .HasColumnType("uniqueidentifier");
+
                     b.Property<string>("Status")
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
@@ -121,6 +124,8 @@ namespace InstituteWebAPI.Migrations
                         .HasColumnType("uniqueidentifier");
 
                     b.HasKey("CardRequestID");
+
+                    b.HasIndex("RequestedByTeacherID");
 
                     b.HasIndex("StudentID");
 
@@ -1087,6 +1092,10 @@ namespace InstituteWebAPI.Migrations
                     b.Property<Guid>("TermMonthID")
                         .HasColumnType("uniqueidentifier");
 
+                    b.Property<string?>("Status")
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
                     b.Property<float>("TotalMarks")
                         .HasColumnType("real");
 
@@ -1754,11 +1763,17 @@ namespace InstituteWebAPI.Migrations
 
             modelBuilder.Entity("InstituteWebApp.Models.Domain.CardRequest", b =>
                 {
+                    b.HasOne("InstituteWebApp.Models.Domain.Teachers", "RequestedByTeacher")
+                        .WithMany()
+                        .HasForeignKey("RequestedByTeacherID");
+
                     b.HasOne("InstituteWebApp.Models.Domain.Students", "Student")
                         .WithMany()
                         .HasForeignKey("StudentID")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
+
+                    b.Navigation("RequestedByTeacher");
 
                     b.Navigation("Student");
                 });

@@ -5,11 +5,13 @@ using InstituteWebAPI.Repositories.Repository;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.FileProviders;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
 using System.Text;
+using System.Threading.RateLimiting;
 using InstituteWebAPI.Services.TermContext;
 using InstituteWebAPI.Services.StudentMonthlyResults;
 using InstituteWebAPI.Services.FeeManagement;
@@ -18,6 +20,11 @@ using InstituteWebAPI.BackgroundJobs;
 using Microsoft.AspNetCore.Diagnostics;
 
 var builder = WebApplication.CreateBuilder(args);
+
+// Load local dev overrides (gitignored — never committed).
+// Provides Jwt:Key and connection string overrides for local development.
+// In production use environment variables or host config instead.
+builder.Configuration.AddJsonFile("appsettings.Local.json", optional: true, reloadOnChange: false);
 
 // ── CORS ─────────────────────────────────────────────────────────────────────
 var allowedOrigins = builder.Configuration.GetSection("Cors:AllowedOrigins").Get<string[]>()
@@ -32,6 +39,21 @@ builder.Services.AddCors(options =>
               .AllowAnyMethod()
               .AllowCredentials();
     });
+});
+
+// ── Rate Limiting ─────────────────────────────────────────────────────────────
+// "login" policy: max 10 attempts per IP per 5 minutes.
+// Prevents password-spray attacks on the login endpoint.
+builder.Services.AddRateLimiter(options =>
+{
+    options.AddFixedWindowLimiter("login", o =>
+    {
+        o.PermitLimit         = 10;
+        o.Window              = TimeSpan.FromMinutes(5);
+        o.QueueProcessingOrder = QueueProcessingOrder.OldestFirst;
+        o.QueueLimit          = 0;
+    });
+    options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
 });
 
 // Add services to the container.
@@ -151,11 +173,13 @@ builder.Services.AddIdentityCore<IdentityUser>()
 
 builder.Services.Configure<IdentityOptions>(options =>
 {
-    options.Password.RequireDigit = false;
+    // Minimum viable policy: 8 chars + at least one digit.
+    // Upper/lower/special kept off to avoid frustrating non-Latin keyboard users.
+    options.Password.RequireDigit = true;
     options.Password.RequireLowercase = false;
     options.Password.RequireNonAlphanumeric = false;
     options.Password.RequireUppercase = false;
-    options.Password.RequiredLength = 6;
+    options.Password.RequiredLength = 8;
     options.Password.RequiredUniqueChars = 1;
 });
 
@@ -182,85 +206,20 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme).AddJw
 
 var app = builder.Build();
 
-// Auto-apply any pending EF Core migrations on startup
+// Auto-apply any pending EF Core migrations on startup.
+// All schema changes are now managed exclusively via EF migrations —
+// see Migrations/ for the full history.
 using (var scope = app.Services.CreateScope())
 {
     var db = scope.ServiceProvider.GetRequiredService<RozhnInstituteDbContext>();
     await db.Database.MigrateAsync();
+}
 
-    // Add columns that were added to the domain model without a proper Designer.cs migration.
-    // Each IF block is idempotent — safe to run on every startup.
-    await db.Database.ExecuteSqlRawAsync(@"
-        IF NOT EXISTS (
-            SELECT 1 FROM sys.columns
-            WHERE object_id = OBJECT_ID(N'Admissions') AND name = N'AdmittedClassID')
-        BEGIN
-            ALTER TABLE [Admissions]
-                ADD [AdmittedClassID] uniqueidentifier NULL;
-        END
-    ");
-
-    await db.Database.ExecuteSqlRawAsync(@"
-        IF NOT EXISTS (
-            SELECT 1 FROM sys.columns
-            WHERE object_id = OBJECT_ID(N'Admissions') AND name = N'AdmissionFee')
-        BEGIN
-            ALTER TABLE [Admissions]
-                ADD [AdmissionFee] decimal(18,2) NOT NULL DEFAULT 0;
-        END
-    ");
-
-    await db.Database.ExecuteSqlRawAsync(@"
-        IF EXISTS (
-            SELECT 1 FROM sys.columns
-            WHERE object_id = OBJECT_ID(N'Admissions') AND name = N'AdmittedClassID')
-        BEGIN
-            IF NOT EXISTS (
-                SELECT 1 FROM sys.indexes
-                WHERE object_id = OBJECT_ID(N'Admissions')
-                  AND name = N'IX_Admissions_AdmittedClassID')
-            BEGIN
-                CREATE INDEX [IX_Admissions_AdmittedClassID]
-                    ON [Admissions] ([AdmittedClassID]);
-            END
-        END
-    ");
-
-    await db.Database.ExecuteSqlRawAsync(@"
-        IF NOT EXISTS (
-            SELECT 1 FROM sys.columns
-            WHERE object_id = OBJECT_ID(N'StudentMonthlyResults') AND name = N'Status')
-        BEGIN
-            ALTER TABLE [StudentMonthlyResults]
-                ADD [Status] nvarchar(50) NULL;
-        END
-    ");
-
-    await db.Database.ExecuteSqlRawAsync(@"
-        IF NOT EXISTS (
-            SELECT 1 FROM sys.columns
-            WHERE object_id = OBJECT_ID(N'CardRequests') AND name = N'RequestedByTeacherID')
-        BEGIN
-            ALTER TABLE [CardRequests]
-                ADD [RequestedByTeacherID] uniqueidentifier NULL;
-        END
-    ");
-
-    await db.Database.ExecuteSqlRawAsync(@"
-        IF EXISTS (
-            SELECT 1 FROM sys.columns
-            WHERE object_id = OBJECT_ID(N'CardRequests') AND name = N'RequestedByTeacherID')
-        BEGIN
-            IF NOT EXISTS (
-                SELECT 1 FROM sys.indexes
-                WHERE object_id = OBJECT_ID(N'CardRequests')
-                  AND name = N'IX_CardRequests_RequestedByTeacherID')
-            BEGIN
-                CREATE INDEX [IX_CardRequests_RequestedByTeacherID]
-                    ON [CardRequests] ([RequestedByTeacherID]);
-            END
-        END
-    ");
+// Apply Identity / auth schema migrations (AspNetUsers, AspNetRoles, etc.)
+using (var scope = app.Services.CreateScope())
+{
+    var authDb = scope.ServiceProvider.GetRequiredService<RozhnInstituteAuthDbContext>();
+    await authDb.Database.MigrateAsync();
 }
 
 // Seed roles + default admin user
@@ -300,6 +259,8 @@ else
 app.UseHttpsRedirection();
 
 app.UseCors("RozhnCorsPolicy");
+
+app.UseRateLimiter();
 
 app.UseAuthentication();
 app.UseAuthorization();

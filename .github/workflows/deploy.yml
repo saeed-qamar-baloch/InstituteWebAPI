@@ -1,0 +1,81 @@
+name: Build & Deploy API
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  build-test-deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      # ── 1. Checkout ──────────────────────────────────────────────────────────
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      # ── 2. Setup .NET 8 ──────────────────────────────────────────────────────
+      - name: Setup .NET 8
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+
+      # ── 3. Restore ───────────────────────────────────────────────────────────
+      - name: Restore
+        run: dotnet restore InstituteWebAPI.sln
+
+      # ── 4. Build ─────────────────────────────────────────────────────────────
+      - name: Build
+        run: dotnet build InstituteWebAPI.sln --no-restore -c Release
+
+      # ── 5. Test — deploy is blocked if any test fails ────────────────────────
+      - name: Test
+        run: dotnet test InstituteWebAPI.Tests/InstituteWebAPI.Tests.csproj --no-build -c Release --verbosity normal
+
+      # ── 6. Publish (push to main only) ───────────────────────────────────────
+      - name: Publish
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        run: |
+          dotnet publish InstituteWebAPI.csproj \
+            -c Release \
+            -r linux-x64 \
+            --self-contained false \
+            -o ./publish
+
+      # ── 7. Package ───────────────────────────────────────────────────────────
+      - name: Package
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        run: tar -czf api.tar.gz -C ./publish .
+
+      # ── 8. Copy to server ────────────────────────────────────────────────────
+      - name: Copy to server
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.SERVER_HOST }}
+          username: ${{ secrets.SERVER_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          source: api.tar.gz
+          target: /tmp/
+
+      # ── 9. Extract & restart ─────────────────────────────────────────────────
+      #  Images/ is excluded — student/teacher photos on the server are never
+      #  overwritten by a deploy.
+      - name: Deploy
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.SERVER_HOST }}
+          username: ${{ secrets.SERVER_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          script: |
+            set -e
+            systemctl stop rozhn-api
+            mkdir -p /var/www/rozhn-api
+            tar -xzf /tmp/api.tar.gz -C /var/www/rozhn-api --exclude='./Images'
+            rm /tmp/api.tar.gz
+            chown -R www-data:www-data /var/www/rozhn-api
+            systemctl start rozhn-api
+            sleep 4
+            systemctl is-active rozhn-api && echo "API is running ✅" || (journalctl -u rozhn-api -n 30 && exit 1)

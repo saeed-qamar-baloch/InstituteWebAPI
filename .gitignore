@@ -361,3 +361,19 @@ MigrationBackup/
 
 # Fody - auto-generated XML schema
 FodyWeavers.xsd
+
+# ── Rozhn: Secrets & local overrides ─────────────────────────────────────────
+# Never commit real JWT keys or connection strings.
+# Use `dotnet user-secrets` for local dev (see SECRETS.md).
+# For environment-specific overrides that contain secrets, use the
+# appsettings.Local.json naming convention — always gitignored.
+appsettings.Local.json
+appsettings.*.Local.json
+secrets.json
+
+# ── Rozhn: Student & teacher photos (PII) ────────────────────────────────────
+# Profile images are served at runtime from the /Images folder but must
+# never be stored in git (privacy + repo size).  Keep only the institute
+# logo (Images/Institute/) which is already tracked.
+Images/Students/
+Images/Teachers/

@@ -192,6 +192,7 @@ namespace InstituteWebAPI.Controllers
 
         [HttpPost]
         [Route("Login")]
+        [Microsoft.AspNetCore.RateLimiting.EnableRateLimiting("login")]
         public async Task<IActionResult> Login([FromBody] LoginDto loginDto)
         {
             var user = await userManager.FindByEmailAsync(loginDto.Username);

@@ -34,11 +34,15 @@ namespace InstituteWebAPI.Repositories.Repository
 
             var credentials = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
 
+            // Lifetime defaults to 480 min (8 hours) so a school-day session stays alive.
+            // Override per environment via Jwt:TokenLifetimeMinutes in config / env vars.
+            var lifetimeMinutes = configuration.GetValue<int>("Jwt:TokenLifetimeMinutes", 480);
+
             var token = new JwtSecurityToken(
                 configuration["Jwt:Issuer"],
                 configuration["Jwt:Audience"],
                 claims,
-                expires: DateTime.UtcNow.AddMinutes(15),
+                expires: DateTime.UtcNow.AddMinutes(lifetimeMinutes),
                 signingCredentials: credentials
             );
 

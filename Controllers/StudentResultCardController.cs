@@ -1,4 +1,5 @@
 using InstituteWebAPI.Data;
+using InstituteWebAPI.Helpers;
 using InstituteWebApp.Models.Domain;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -23,16 +24,10 @@ namespace InstituteWebAPI.Controllers
             this.dbContext = dbContext;
         }
 
-        private static string GradeFromPct(float pct) => pct switch
-        {
-            >= 80 => "A+",
-            >= 70 => "A",
-            >= 60 => "B",
-            >= 50 => "C",
-            >= 45 => "D",
-            >= 33 => "E",
-            _     => "F"
-        };
+        // Grade resolution is now delegated to GradeCalculator.Resolve(), which
+        // uses DB-configured GradeCriteria loaded once per request (see GetResultCard).
+        // The hardcoded switch was removed because it silently ignored admin-configured
+        // grade boundaries.
 
         // ── GET api/students/{studentId}/result-card?termId=&currentClassId= ──
         [HttpGet]
@@ -44,6 +39,14 @@ namespace InstituteWebAPI.Controllers
             if (studentId      == Guid.Empty) return BadRequest("studentId is required.");
             if (termId         == Guid.Empty) return BadRequest("termId is required.");
             if (currentClassId == Guid.Empty) return BadRequest("currentClassId is required.");
+
+            // ── Grade criteria (loaded once per request) ──────────────────────
+            // Loaded from the DB so admin-configured thresholds are respected.
+            // Falls back to built-in defaults (A+=80…F) when the table is empty.
+            var gradeCriteria = await dbContext.GradeCriterias
+                .AsNoTracking()
+                .OrderBy(g => g.DisplayOrder)
+                .ToListAsync();
 
             // ── Student ───────────────────────────────────────────────────────
             var student = await dbContext.Students
@@ -136,7 +139,7 @@ namespace InstituteWebAPI.Controllers
                 var pct      = res?.Percentage    ?? 0f;
                 var status   = res?.Status;
                 var hasStatus = !string.IsNullOrWhiteSpace(status);
-                var grade    = (!hasStatus && total > 0) ? GradeFromPct(pct) : "-";
+                var grade    = (!hasStatus && total > 0) ? GradeCalculator.Resolve(pct, gradeCriteria) : "-";
                 var pass     = total > 0 && obtained >= passing;
 
                 return new
@@ -158,7 +161,7 @@ namespace InstituteWebAPI.Controllers
             if (terminal != null)
             {
                 var tPct   = terminal.Percentage;
-                var tGrade = GradeFromPct(tPct);
+                var tGrade = GradeCalculator.Resolve(tPct, gradeCriteria);
                 terminalRow = new
                 {
                     TotalMarksConsidered = terminal.TotalMarksConsidered,
@@ -178,7 +181,7 @@ namespace InstituteWebAPI.Controllers
             var overallPct    = terminal != null
                 ? (float)Math.Round(terminal.Percentage, 1)
                 : 0f;
-            var overallGrade  = terminal != null ? GradeFromPct(terminal.Percentage) : "-";
+            var overallGrade  = terminal != null ? GradeCalculator.Resolve(terminal.Percentage, gradeCriteria) : "-";
 
             return Ok(new
             {

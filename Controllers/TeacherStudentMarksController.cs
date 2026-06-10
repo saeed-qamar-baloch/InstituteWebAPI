@@ -1,5 +1,6 @@
 ﻿using AutoMapper;
 using InstituteWebAPI.Data;
+using InstituteWebAPI.Helpers;
 using InstituteWebAPI.Models.DTO.StudentMarks;
 using InstituteWebAPI.Models.DTO.StudentMarks.Terminal;
 using InstituteWebAPI.Repositories.IRepository;
@@ -836,14 +837,7 @@ namespace InstituteWebAPI.Controllers
                 .OrderByDescending(g => g.MinPercentage)
                 .ToListAsync();
 
-            // Fallback if no grade criteria configured
-            string GradeFromPct(float pct)
-            {
-                if (pct <= 0) return "F";
-                foreach (var gc in gradeCriterias)
-                    if (pct >= gc.MinPercentage) return gc.GradeLabel;
-                return "F";
-            }
+
 
             var existing = await dbContext.TerminalResults
                 .Where(x => x.CurrentClassID == dto.CurrentClassID && studentIds.Contains(x.StudentID))
@@ -876,7 +870,7 @@ namespace InstituteWebAPI.Controllers
                 var totalObt   = m1Obt   + m2Obt   + m3Obt;
                 var totalMarks = m1Total + m2Total + m3Total;
                 var pct        = totalMarks <= 0 ? 0f : (totalObt / totalMarks * 100f);
-                var grade      = totalMarks <= 0 ? "N/A" : GradeFromPct(pct);
+                var grade      = totalMarks <= 0 ? "N/A" : GradeCalculator.Resolve(pct, gradeCriterias);
 
                 // Pass/Fail based on PERCENTAGE, not raw marks
                 var passed = pct >= passingPct;

@@ -1,4 +1,5 @@
 using AutoMapper;
+using InstituteWebAPI.Helpers;
 using InstituteWebAPI.Models.Configuration;
 using InstituteWebAPI.Models.DTO.FeeManagement;
 using InstituteWebAPI.Repositories.IRepository;
@@ -41,15 +42,8 @@ namespace InstituteWebAPI.Services.FeeManagement
             if (scholarship == null)
                 return (monthlyFee, FeeDueStatus.Unpaid, true);
 
-            var pct = Math.Clamp(scholarship.DiscountPercent, 0, 100);
-            var discounted = Math.Round(monthlyFee * (100 - pct) / 100m, 2);
-
-            // Fully waived (leave or 100% scholarship) → mark Waived, no late fee.
-            if (pct >= 100 || discounted <= 0m)
-                return (0m, FeeDueStatus.Waived, false);
-
-            // Partial scholarship → reduced base, no late fee on concession months.
-            return (discounted, FeeDueStatus.Unpaid, false);
+            // Delegate to the testable pure function in FeeCalculator.
+            return FeeCalculator.ApplyConcession(monthlyFee, scholarship.DiscountPercent);
         }
 
         public async Task<IReadOnlyList<FeeDueDto>> GenerateMonthlyDuesAsync(Guid studentId)
@@ -655,27 +649,8 @@ namespace InstituteWebAPI.Services.FeeManagement
             };
         }
 
-        private bool ApplyLateFeeIfNeeded(FeeDue due, DateTime today, decimal lateFeeAmount)
-        {
-            // Late fees apply only to monthly dues — never to admission or card fees.
-            if (due.FeeType != FeeDueType.Monthly)
-            {
-                return false;
-            }
-
-            if (due.IsLateFeeWaived || due.LateFeeAmount > 0m)
-            {
-                return false;
-            }
-
-            if (today <= due.DueDate.Date)
-            {
-                return false;
-            }
-
-            due.LateFeeAmount = NormalizeAmount(lateFeeAmount);
-            return true;
-        }
+        private static bool ApplyLateFeeIfNeeded(FeeDue due, DateTime today, decimal lateFeeAmount) =>
+            FeeCalculator.ApplyLateFeeIfNeeded(due, today, lateFeeAmount);
 
         private async Task<(decimal LateFeeAmount, decimal AdmissionFeeAmount, decimal CardFeeAmount, DateTime? FeeStartMonth)> GetFeeSettingsValuesAsync()
         {
@@ -688,7 +663,8 @@ namespace InstituteWebAPI.Services.FeeManagement
             return (NormalizeAmount(settings.LateFeeAmount), NormalizeAmount(settings.AdmissionFeeAmount), NormalizeAmount(settings.CardFeeAmount), settings.FeeStartMonth);
         }
 
-        private decimal NormalizeAmount(decimal amount) => amount < 0 ? 0 : amount;
+        private static decimal NormalizeAmount(decimal amount) =>
+            FeeCalculator.NormalizeAmount(amount);
 
         // ── Fee matrix ────────────────────────────────────────────────────────
         public async Task<FeeMatrixDto> GetFeeMatrixAsync(Guid? classId, Guid? teacherId, string? status)
