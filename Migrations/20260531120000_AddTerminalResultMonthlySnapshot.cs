@@ -1,13 +1,11 @@
-using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Migrations;
 
 #nullable disable
 
 namespace InstituteWebAPI.Migrations
 {
-    /// <inheritdoc />
-    [DbContext(typeof(InstituteWebAPI.Data.RozhnInstituteDbContext))]
-    [Migration("20260531120000_AddTerminalResultMonthlySnapshot")]
+    // NOTE: No [Migration] attribute — superseded by AddTerminalResultSnapshot (20260531204308)
+    // which adds the same columns. Keeping this visible causes duplicate-column error 2705.
     public partial class AddTerminalResultMonthlySnapshot : Migration
     {
         /// <inheritdoc />
