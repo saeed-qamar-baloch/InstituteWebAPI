@@ -4,6 +4,7 @@ using InstituteWebAPI.Repositories.IRepository;
 using InstituteWebAPI.Repositories.Repository;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.EntityFrameworkCore;
@@ -205,6 +206,12 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme).AddJw
 });
 
 var app = builder.Build();
+
+// Trust X-Forwarded-Proto from nginx so req.Scheme = "https" in all controllers
+app.UseForwardedHeaders(new ForwardedHeadersOptions
+{
+    ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto
+});
 
 // Auto-apply any pending EF Core migrations on startup.
 // All schema changes are now managed exclusively via EF migrations —
