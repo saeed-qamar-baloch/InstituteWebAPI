@@ -74,7 +74,8 @@ jobs:
             systemctl stop rozhn-api
             mkdir -p /var/www/rozhn-api
             tar -xzf /tmp/api.tar.gz -C /var/www/rozhn-api --exclude='./Images'
-            mkdir -p /var/www/rozhn-api/Images
+            mkdir -p /var/www/rozhn-api/Images/Students
+            mkdir -p /var/www/rozhn-api/Images/Teachers
             rm /tmp/api.tar.gz
             chown -R www-data:www-data /var/www/rozhn-api
             systemctl start rozhn-api
