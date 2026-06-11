@@ -265,10 +265,16 @@ app.UseRateLimiter();
 app.UseAuthentication();
 app.UseAuthorization();
 
+// Ensure Images subdirectories exist — prevents crash if deploy skips them
+var imagesRoot = Path.Combine(Directory.GetCurrentDirectory(), "Images");
+Directory.CreateDirectory(Path.Combine(imagesRoot, "Students"));
+Directory.CreateDirectory(Path.Combine(imagesRoot, "Teachers"));
+Directory.CreateDirectory(Path.Combine(imagesRoot, "Institute"));
+
 app.UseStaticFiles(
     new StaticFileOptions
     {
-        FileProvider = new PhysicalFileProvider(Path.Combine(Directory.GetCurrentDirectory(), "Images")),
+        FileProvider = new PhysicalFileProvider(imagesRoot),
         RequestPath = "/images",
         // Allow the SPA (different origin) to read these images onto a <canvas>
         // for ID cards / admit cards without tainting it.
