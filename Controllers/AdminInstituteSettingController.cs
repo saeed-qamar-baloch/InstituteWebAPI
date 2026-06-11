@@ -126,7 +126,7 @@ namespace InstituteWebAPI.Controllers
                 await file.CopyToAsync(fs);
 
             var req = http.HttpContext!.Request;
-            var url = $"{req.Scheme}://{req.Host}{req.PathBase}/Images/Institute/{fileName}?v={DateTime.UtcNow.Ticks}";
+            var url = $"{req.Scheme}://{req.Host}{req.PathBase}/images/Institute/{fileName}?v={DateTime.UtcNow.Ticks}";
 
             var s = await GetOrCreateAsync();
             s.LogoUrl = url;

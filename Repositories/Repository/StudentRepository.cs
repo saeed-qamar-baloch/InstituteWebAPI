@@ -135,7 +135,7 @@ namespace InstituteWebAPI.Repositories.Repository
                     await image.SaveAsync(localFilePath, jpegEncoder);
                 }
 
-                student.Picture = $"{httpContextAccessor.HttpContext.Request.Scheme}://{httpContextAccessor.HttpContext.Request.Host}{httpContextAccessor.HttpContext.Request.PathBase}/Images/Students/{student.RegistrationNo}{fileExtension}";
+                student.Picture = $"{httpContextAccessor.HttpContext.Request.Scheme}://{httpContextAccessor.HttpContext.Request.Host}{httpContextAccessor.HttpContext.Request.PathBase}/images/Students/{student.RegistrationNo}{fileExtension}";
             }
 
 
@@ -172,7 +172,7 @@ namespace InstituteWebAPI.Repositories.Repository
 
             
 
-                var UrlFilePath = $"{httpContextAccessor.HttpContext.Request.Scheme}://{httpContextAccessor.HttpContext.Request.Host}{httpContextAccessor.HttpContext.Request.PathBase}/Images/Students/{existing.RegistrationNo}{fileExtension}";
+                var UrlFilePath = $"{httpContextAccessor.HttpContext.Request.Scheme}://{httpContextAccessor.HttpContext.Request.Host}{httpContextAccessor.HttpContext.Request.PathBase}/images/Students/{existing.RegistrationNo}{fileExtension}";
 
                 existing.Picture = UrlFilePath;
             }

@@ -38,7 +38,7 @@ public class TeacherRepository : ITeacherRepository
             var fileExtension = Path.GetExtension(teacher.file.FileName);
 
             var localFilePath = Path.Combine(webHostEnvironment.ContentRootPath, "Images", "Teachers", $"{teacher.RegistrationNo}{fileExtension}");
-            var urlPath = $"{httpContextAccessor.HttpContext.Request.Scheme}://{httpContextAccessor.HttpContext.Request.Host}{httpContextAccessor.HttpContext.Request.PathBase}/Images/Teachers/{teacher.RegistrationNo}{fileExtension}";
+            var urlPath = $"{httpContextAccessor.HttpContext.Request.Scheme}://{httpContextAccessor.HttpContext.Request.Host}{httpContextAccessor.HttpContext.Request.PathBase}/images/Teachers/{teacher.RegistrationNo}{fileExtension}";
 
             using var stream = new FileStream(localFilePath, FileMode.Create);
             await teacher.file.CopyToAsync(stream);
@@ -97,7 +97,7 @@ public class TeacherRepository : ITeacherRepository
             var fileExtension = Path.GetExtension(updated.file.FileName);
 
             var localFilePath = Path.Combine(webHostEnvironment.ContentRootPath, "Images", "Teachers", $"{teacher.RegistrationNo}{fileExtension}");
-            var urlPath = $"{httpContextAccessor.HttpContext.Request.Scheme}://{httpContextAccessor.HttpContext.Request.Host}{httpContextAccessor.HttpContext.Request.PathBase}/Images/Teachers/{teacher.RegistrationNo}{fileExtension}";
+            var urlPath = $"{httpContextAccessor.HttpContext.Request.Scheme}://{httpContextAccessor.HttpContext.Request.Host}{httpContextAccessor.HttpContext.Request.PathBase}/images/Teachers/{teacher.RegistrationNo}{fileExtension}";
 
             using var stream = new FileStream(localFilePath, FileMode.Create);
             await updated.file.CopyToAsync(stream);

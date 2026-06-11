@@ -1115,7 +1115,7 @@ namespace InstituteWebAPI.Controllers
             using (var fs = new FileStream(path, FileMode.Create)) await file.CopyToAsync(fs);
 
             var req = http.HttpContext!.Request;
-            student.Picture = $"{req.Scheme}://{req.Host}{req.PathBase}/Images/Students/{regNo}{ext}";
+            student.Picture = $"{req.Scheme}://{req.Host}{req.PathBase}/images/Students/{regNo}{ext}";
             await db.SaveChangesAsync();
             return Ok(new { matched = true });
         }
