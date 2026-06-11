@@ -30,7 +30,7 @@ public class TeacherRepository : ITeacherRepository
         // Use the provided RegDate to generate the RegistrationNo
         string monthYear = teacher.RegistrationDate.ToString("MMMyy"); // e.g., Jan25
         string formattedSerial = newSerial.ToString("D3");     // e.g., 001
-        teacher.RegistrationNo = $"LT-{monthYear}-{formattedSerial}";
+        teacher.RegistrationNo = $"RZST-{monthYear}-{formattedSerial}";
 
 
         if (teacher.file != null)

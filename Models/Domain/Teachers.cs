@@ -25,6 +25,8 @@ namespace InstituteWebApp.Models.Domain
         public string Cnic { get; set; }
         public string Picture { get; set; }
         public string Experience { get; set; }
+        public string? Email { get; set; }
+        public string? Skills { get; set; }
         public DateTime RegistrationDate { get; set; }
 
         [NotMapped]

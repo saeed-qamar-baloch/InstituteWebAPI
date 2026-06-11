@@ -19,6 +19,8 @@ public class AddTeacherDto
     public string? Cnic { get; set; }
     public string? Picture { get; set; }
     public string? Experience { get; set; }
+    public string? Email { get; set; }
+    public string? Skills { get; set; }
     public DateTime RegistrationDate { get; set; }
     public bool IsTeaching { get; set; }
     public IFormFile? file { get; set; }

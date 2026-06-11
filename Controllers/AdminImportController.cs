@@ -1043,6 +1043,8 @@ namespace InstituteWebAPI.Controllers
             public string? City { get; set; }
             public string? Address { get; set; }
             public string? RegDate { get; set; }
+            public string? Email { get; set; }
+            public string? Skills { get; set; }
         }
 
         [HttpPost("teachers")]
@@ -1068,7 +1070,7 @@ namespace InstituteWebAPI.Controllers
                     {
                         TeacherID = Guid.NewGuid(),
                         Serial = serial,
-                        RegistrationNo = $"LT-{regDate:MMMyy}-{serial:D3}",
+                        RegistrationNo = $"RZST-{regDate:MMMyy}-{serial:D3}",
                         TeacherName = name,
                         FatherName = father,
                         Gender = S(r.Gender).Length > 0 ? S(r.Gender) : "—",
@@ -1084,6 +1086,8 @@ namespace InstituteWebAPI.Controllers
                         Cnic = S(r.Cnic),
                         Picture = "",
                         Experience = S(r.Experience),
+                        Email = S(r.Email).Length > 0 ? S(r.Email) : null,
+                        Skills = S(r.Skills).Length > 0 ? S(r.Skills) : null,
                         RegistrationDate = regDate,
                         IsTeaching = true,
                     };
