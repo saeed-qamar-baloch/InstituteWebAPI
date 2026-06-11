@@ -76,6 +76,7 @@ jobs:
             tar -xzf /tmp/api.tar.gz -C /var/www/rozhn-api --exclude='./Images'
             mkdir -p /var/www/rozhn-api/Images/Students
             mkdir -p /var/www/rozhn-api/Images/Teachers
+            mkdir -p /var/www/rozhn-api/Images/Institute
             rm /tmp/api.tar.gz
             chown -R www-data:www-data /var/www/rozhn-api
             systemctl start rozhn-api
