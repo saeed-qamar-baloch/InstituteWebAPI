@@ -70,6 +70,11 @@ namespace InstituteWebAPI.Data
                 if (!await userManager.IsInRoleAsync(adminUser, "Admin"))
                     await userManager.AddToRoleAsync(adminUser, "Admin");
             }
+
+
+
+
+
         }
     }
 }
