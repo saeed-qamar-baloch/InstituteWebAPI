@@ -4,17 +4,17 @@ using InstituteWebAPI.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
-
-namespace InstituteWebAPI.Migrations
+[DbContext(typeof(RozhnInstituteDbContext))]
+[Migration("20260611222534_AddWebsitePostSlug")]
+partial class AddWebsitePostSlug
 {
-    [DbContext(typeof(RozhnInstituteDbContext))]
-    partial class RozhnInstituteDbContextModelSnapshot : ModelSnapshot
+    /// <inheritdoc />
+    protected override void BuildTargetModel(ModelBuilder modelBuilder)
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
-        {
 #pragma warning disable 612, 618
             modelBuilder
                 .HasAnnotation("ProductVersion", "9.0.2")
@@ -668,119 +668,6 @@ namespace InstituteWebAPI.Migrations
                     b.ToTable("InstituteSettings");
                 });
 
-            modelBuilder.Entity("InstituteWebApp.Models.Domain.Learner", b =>
-                {
-                    b.Property<Guid>("LearnerID")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uniqueidentifier");
-
-                    b.Property<string>("CompletedLessonsJson")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("datetime2");
-
-                    b.Property<int>("CurrentStreak")
-                        .HasColumnType("int");
-
-                    b.Property<string>("DisplayName")
-                        .IsRequired()
-                        .HasMaxLength(120)
-                        .HasColumnType("nvarchar(120)");
-
-                    b.Property<string>("Email")
-                        .HasMaxLength(200)
-                        .HasColumnType("nvarchar(200)");
-
-                    b.Property<string>("GoogleSubject")
-                        .HasMaxLength(120)
-                        .HasColumnType("nvarchar(120)");
-
-                    b.Property<DateTime?>("LastActiveDate")
-                        .HasColumnType("datetime2");
-
-                    b.Property<string>("LearningDaysJson")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<int>("LongestStreak")
-                        .HasColumnType("int");
-
-                    b.Property<string>("PasswordHash")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.HasKey("LearnerID");
-
-                    b.ToTable("Learners", "web");
-                });
-
-            modelBuilder.Entity("InstituteWebApp.Models.Domain.Lesson", b =>
-                {
-                    b.Property<Guid>("LessonID")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uniqueidentifier");
-
-                    b.Property<string>("BlocksJson")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("Category")
-                        .IsRequired()
-                        .HasMaxLength(60)
-                        .HasColumnType("nvarchar(60)");
-
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("datetime2");
-
-                    b.Property<string>("Description")
-                        .IsRequired()
-                        .HasMaxLength(500)
-                        .HasColumnType("nvarchar(500)");
-
-                    b.Property<bool>("IsPopular")
-                        .HasColumnType("bit");
-
-                    b.Property<bool>("IsPractice")
-                        .HasColumnType("bit");
-
-                    b.Property<bool>("IsPublished")
-                        .HasColumnType("bit");
-
-                    b.Property<string>("Level")
-                        .IsRequired()
-                        .HasMaxLength(30)
-                        .HasColumnType("nvarchar(30)");
-
-                    b.Property<int>("Order")
-                        .HasColumnType("int");
-
-                    b.Property<string>("Section")
-                        .IsRequired()
-                        .HasMaxLength(120)
-                        .HasColumnType("nvarchar(120)");
-
-                    b.Property<int>("SectionOrder")
-                        .HasColumnType("int");
-
-                    b.Property<string>("Slug")
-                        .IsRequired()
-                        .HasMaxLength(200)
-                        .HasColumnType("nvarchar(200)");
-
-                    b.Property<string>("Title")
-                        .IsRequired()
-                        .HasMaxLength(200)
-                        .HasColumnType("nvarchar(200)");
-
-                    b.Property<DateTime>("UpdatedAt")
-                        .HasColumnType("datetime2");
-
-                    b.HasKey("LessonID");
-
-                    b.ToTable("Lessons", "web");
-                });
-
             modelBuilder.Entity("InstituteWebApp.Models.Domain.MarkEditRequest", b =>
                 {
                     b.Property<Guid>("RequestID")
@@ -1077,24 +964,6 @@ namespace InstituteWebAPI.Migrations
                     b.HasKey("SessionID");
 
                     b.ToTable("Sessions");
-                });
-
-            modelBuilder.Entity("InstituteWebApp.Models.Domain.SiteContent", b =>
-                {
-                    b.Property<string>("Key")
-                        .HasMaxLength(100)
-                        .HasColumnType("nvarchar(100)");
-
-                    b.Property<string>("Json")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<DateTime>("UpdatedAt")
-                        .HasColumnType("datetime2");
-
-                    b.HasKey("Key");
-
-                    b.ToTable("SiteContents", "web");
                 });
 
             modelBuilder.Entity("InstituteWebApp.Models.Domain.Slots", b =>
@@ -2711,4 +2580,3 @@ namespace InstituteWebAPI.Migrations
 #pragma warning restore 612, 618
         }
     }
-}

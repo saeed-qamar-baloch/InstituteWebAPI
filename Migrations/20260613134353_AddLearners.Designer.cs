@@ -4,17 +4,17 @@ using InstituteWebAPI.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
-
-namespace InstituteWebAPI.Migrations
+[DbContext(typeof(RozhnInstituteDbContext))]
+[Migration("20260613134353_AddLearners")]
+partial class AddLearners
 {
-    [DbContext(typeof(RozhnInstituteDbContext))]
-    partial class RozhnInstituteDbContextModelSnapshot : ModelSnapshot
+    /// <inheritdoc />
+    protected override void BuildTargetModel(ModelBuilder modelBuilder)
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
-        {
 #pragma warning disable 612, 618
             modelBuilder
                 .HasAnnotation("ProductVersion", "9.0.2")
@@ -725,11 +725,6 @@ namespace InstituteWebAPI.Migrations
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
-                    b.Property<string>("Category")
-                        .IsRequired()
-                        .HasMaxLength(60)
-                        .HasColumnType("nvarchar(60)");
-
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("datetime2");
 
@@ -738,19 +733,13 @@ namespace InstituteWebAPI.Migrations
                         .HasMaxLength(500)
                         .HasColumnType("nvarchar(500)");
 
-                    b.Property<bool>("IsPopular")
-                        .HasColumnType("bit");
-
-                    b.Property<bool>("IsPractice")
-                        .HasColumnType("bit");
-
                     b.Property<bool>("IsPublished")
                         .HasColumnType("bit");
 
                     b.Property<string>("Level")
                         .IsRequired()
-                        .HasMaxLength(30)
-                        .HasColumnType("nvarchar(30)");
+                        .HasMaxLength(10)
+                        .HasColumnType("nvarchar(10)");
 
                     b.Property<int>("Order")
                         .HasColumnType("int");
@@ -2711,4 +2700,3 @@ namespace InstituteWebAPI.Migrations
 #pragma warning restore 612, 618
         }
     }
-}

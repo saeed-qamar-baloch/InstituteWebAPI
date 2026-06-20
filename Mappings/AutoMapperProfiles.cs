@@ -32,6 +32,12 @@ namespace InstituteWebAPI.Mappings
         public AutoMapperProfiles()
         {
             CreateMap<Term, TermDto>().ReverseMap();
+            CreateMap<WebsitePost, InstituteWebAPI.Models.DTO.WebsitePosts.WebsitePostDto>().ReverseMap();
+            CreateMap<InstituteWebAPI.Models.DTO.WebsitePosts.AddWebsitePostDto, WebsitePost>().ReverseMap();
+            CreateMap<InstituteWebAPI.Models.DTO.WebsitePosts.UpdateWebsitePostDto, WebsitePost>().ReverseMap();
+            CreateMap<Lesson, InstituteWebAPI.Models.DTO.Lessons.LessonDto>().ReverseMap();
+            CreateMap<InstituteWebAPI.Models.DTO.Lessons.AddLessonDto, Lesson>().ReverseMap();
+            CreateMap<InstituteWebAPI.Models.DTO.Lessons.UpdateLessonDto, Lesson>().ReverseMap();
             CreateMap<AddTermDto, Term>().ReverseMap();
             CreateMap<CourseDto, Courses>().ReverseMap();
             CreateMap<AddCourseDto, Courses>().ReverseMap();

@@ -4,17 +4,17 @@ using InstituteWebAPI.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
-
-namespace InstituteWebAPI.Migrations
+[DbContext(typeof(RozhnInstituteDbContext))]
+[Migration("20260613205011_LearnCategories")]
+partial class LearnCategories
 {
-    [DbContext(typeof(RozhnInstituteDbContext))]
-    partial class RozhnInstituteDbContextModelSnapshot : ModelSnapshot
+    /// <inheritdoc />
+    protected override void BuildTargetModel(ModelBuilder modelBuilder)
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
-        {
 #pragma warning disable 612, 618
             modelBuilder
                 .HasAnnotation("ProductVersion", "9.0.2")
@@ -749,8 +749,8 @@ namespace InstituteWebAPI.Migrations
 
                     b.Property<string>("Level")
                         .IsRequired()
-                        .HasMaxLength(30)
-                        .HasColumnType("nvarchar(30)");
+                        .HasMaxLength(10)
+                        .HasColumnType("nvarchar(10)");
 
                     b.Property<int>("Order")
                         .HasColumnType("int");
@@ -2711,4 +2711,3 @@ namespace InstituteWebAPI.Migrations
 #pragma warning restore 612, 618
         }
     }
-}

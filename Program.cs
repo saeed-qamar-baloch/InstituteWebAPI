@@ -128,6 +128,10 @@ builder.Services.Configure<FeeManagementOptions>(builder.Configuration.GetSectio
 builder.Services.AddScoped<ITermRepository, TermRepository>();
 builder.Services.AddScoped<ITermMonthsRepository, TermMonthsRepository>();
 builder.Services.AddScoped<ICoursesRepository, CoursesRepository>();
+builder.Services.AddScoped<IWebsitePostRepository, WebsitePostRepository>();
+builder.Services.AddScoped<ILessonRepository, LessonRepository>();
+builder.Services.AddScoped<ILearnerRepository, LearnerRepository>();
+builder.Services.AddScoped<IPasswordHasher<InstituteWebApp.Models.Domain.Learner>, PasswordHasher<InstituteWebApp.Models.Domain.Learner>>();
 builder.Services.AddScoped<IVillageRepository, VillageRepository>();
 builder.Services.AddScoped<IClassesRepository, ClassesRepository>();
 builder.Services.AddScoped<ISlotsRepository, SlotsRepository>();
@@ -277,6 +281,7 @@ var imagesRoot = Path.Combine(Directory.GetCurrentDirectory(), "Images");
 Directory.CreateDirectory(Path.Combine(imagesRoot, "Students"));
 Directory.CreateDirectory(Path.Combine(imagesRoot, "Teachers"));
 Directory.CreateDirectory(Path.Combine(imagesRoot, "Institute"));
+Directory.CreateDirectory(Path.Combine(imagesRoot, "Website"));
 
 app.UseStaticFiles(
     new StaticFileOptions

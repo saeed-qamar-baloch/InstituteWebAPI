@@ -1,4 +1,4 @@
-using InstituteWebApp.Models.Domain;
+﻿using InstituteWebApp.Models.Domain;
 using Microsoft.EntityFrameworkCore;
 
 namespace InstituteWebAPI.Data
@@ -52,6 +52,12 @@ namespace InstituteWebAPI.Data
         public DbSet<TeacherSalary> TeacherSalaries { get; set; }
         public DbSet<TestSchedule> TestSchedules { get; set; }
         public DbSet<AdmitCard> AdmitCards { get; set; }
+
+        // ── Public website content (rozhn.org) ──────────────────────────────
+        public DbSet<WebsitePost> WebsitePosts { get; set; }
+        public DbSet<SiteContent> SiteContents { get; set; }
+        public DbSet<Lesson> Lessons { get; set; }
+        public DbSet<Learner> Learners { get; set; }
         public DbSet<ExpenseCategory> ExpenseCategories { get; set; }
         public DbSet<Expense> Expenses { get; set; }
         public DbSet<CardRequest> CardRequests { get; set; }
