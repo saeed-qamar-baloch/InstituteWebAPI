@@ -11,6 +11,7 @@ namespace InstituteWebAPI.Controllers
 {
     [Route("api/fee-management")]
     [ApiController]
+    [Authorize(Roles = "Admin")]
     public class FeeManagementController : ControllerBase
     {
         private readonly IFeeManagementService service;

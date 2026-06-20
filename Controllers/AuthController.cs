@@ -192,6 +192,7 @@ namespace InstituteWebAPI.Controllers
 
         [HttpPost]
         [Route("Login")]
+        [AllowAnonymous]
         [Microsoft.AspNetCore.RateLimiting.EnableRateLimiting("login")]
         public async Task<IActionResult> Login([FromBody] LoginDto loginDto)
         {

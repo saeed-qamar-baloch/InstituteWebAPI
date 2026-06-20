@@ -1,5 +1,6 @@
 ﻿using AutoMapper;
 using InstituteWebApp.Models.Domain;
+using Microsoft.AspNetCore.Authorization;
 using InstituteWebAPI.Repositories.IRepository;
 using Microsoft.AspNetCore.Mvc;
 using InstituteWebAPI.Models.DTO.TeacherCourse;
@@ -9,6 +10,7 @@ namespace InstituteWebAPI.Controllers
     [Route("api/[controller]")]
     [ApiController]
     [Microsoft.AspNetCore.Authorization.Authorize(Roles = "Admin")]
+    [Authorize(Roles = "Admin")]
     public class AdminTeacherCoursesController : ControllerBase
     {
         private readonly ITeacherCoursesRepository repo;

@@ -1,5 +1,7 @@
 using InstituteWebAPI.Data;
+using System.Security.Claims;
 using InstituteWebAPI.Helpers;
+using InstituteWebAPI.Repositories.IRepository;
 using InstituteWebApp.Models.Domain;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -18,10 +20,12 @@ namespace InstituteWebAPI.Controllers
     public class StudentResultCardController : ControllerBase
     {
         private readonly RozhnInstituteDbContext dbContext;
+        private readonly ITeacherIdentityLinkRepository teacherIdentity;
 
-        public StudentResultCardController(RozhnInstituteDbContext dbContext)
+        public StudentResultCardController(RozhnInstituteDbContext dbContext, ITeacherIdentityLinkRepository teacherIdentity)
         {
             this.dbContext = dbContext;
+            this.teacherIdentity = teacherIdentity;
         }
 
         // Grade resolution is now delegated to GradeCalculator.Resolve(), which
@@ -70,6 +74,15 @@ namespace InstituteWebAPI.Controllers
                 .Include(cc => cc.Section)
                 .FirstOrDefaultAsync(cc => cc.CurrentClassID == currentClassId);
             if (currentClass == null) return NotFound("Class not found.");
+
+            // A Teacher may only view result cards for classes they teach.
+            if (User.IsInRole("Teacher") && !User.IsInRole("Admin"))
+            {
+                var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+                var myTeacherId = userId == null ? (Guid?)null : await teacherIdentity.GetTeacherIdForUserIdAsync(userId);
+                if (myTeacherId == null || currentClass.TeacherID != myTeacherId)
+                    return Forbid();
+            }
 
             // ── Term months (ordered by TermMonth int) ────────────────────────
             var termMonths = await dbContext.TermMonths

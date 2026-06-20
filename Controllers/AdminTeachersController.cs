@@ -1,10 +1,12 @@
 ﻿using AutoMapper;
 using InstituteWebApp.Models.Domain;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 [Route("api/[controller]")]
 [ApiController]
 [Microsoft.AspNetCore.Authorization.Authorize(Roles = "Admin")]
+[Authorize(Roles = "Admin")]
 public class AdminTeachersController : ControllerBase
 {
     private readonly ITeacherRepository repo;

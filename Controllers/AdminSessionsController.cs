@@ -1,5 +1,6 @@
 ﻿using AutoMapper;
 using InstituteWebAPI.Models.DTO.Sessions;
+using Microsoft.AspNetCore.Authorization;
 using InstituteWebAPI.Repositories.IRepository;
 using InstituteWebApp.Models.Domain;
 using Microsoft.AspNetCore.Mvc;
@@ -9,6 +10,7 @@ namespace InstituteWebAPI.Controllers
     [Route("api/[controller]")]
     [ApiController]
     [Microsoft.AspNetCore.Authorization.Authorize(Roles = "Admin")]
+    [Authorize(Roles = "Admin")]
     public class AdminSessionsController : ControllerBase
     {
         private readonly ISessionRepository sessionRepository;

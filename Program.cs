@@ -209,6 +209,16 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme).AddJw
     IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtKey))
 });
 
+// SECURITY: every endpoint requires an authenticated user UNLESS it is explicitly
+// marked [AllowAnonymous]. Closes any controller/action missing an [Authorize]
+// attribute (defence-in-depth on top of the per-controller role gates).
+builder.Services.AddAuthorization(options =>
+{
+    options.FallbackPolicy = new Microsoft.AspNetCore.Authorization.AuthorizationPolicyBuilder()
+        .RequireAuthenticatedUser()
+        .Build();
+});
+
 var app = builder.Build();
 
 // Trust X-Forwarded-Proto from nginx so req.Scheme = "https" in all controllers

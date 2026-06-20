@@ -41,6 +41,7 @@ namespace InstituteWebAPI.Controllers
         }
 
         [HttpPost]
+        [Authorize(Roles = "Admin")]
         public async Task<IActionResult> Create([FromBody] AddTermMonthsDto addTermMonthsDto)
         {
             
@@ -52,6 +53,7 @@ namespace InstituteWebAPI.Controllers
         }
 
         [HttpPut("{id:Guid}")]
+        [Authorize(Roles = "Admin")]
         public async Task<IActionResult> Update([FromRoute] Guid id, [FromBody] TermMonthsUpdateRequestDto termMonthsUpdateRequestDto)
         {
             var termMonthsDomainModel = mapper.Map<TermMonths>(termMonthsUpdateRequestDto);
@@ -64,6 +66,7 @@ namespace InstituteWebAPI.Controllers
         }
 
         [HttpDelete("{id:Guid}")]
+        [Authorize(Roles = "Admin")]
         public async Task<IActionResult> Delete([FromRoute] Guid id)
         {
             var deletedTermMonth = await termMonthsRepository.DeleteAsync(id);

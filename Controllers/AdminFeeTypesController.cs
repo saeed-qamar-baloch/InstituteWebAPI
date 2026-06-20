@@ -1,4 +1,5 @@
 using AutoMapper;
+using Microsoft.AspNetCore.Authorization;
 using InstituteWebAPI.Models.DTO.FeeType;
 using InstituteWebAPI.Repositories.IRepository;
 using InstituteWebApp.Models.Domain;
@@ -9,6 +10,7 @@ namespace InstituteWebAPI.Controllers
     [Route("api/[controller]")]
     [ApiController]
     [Microsoft.AspNetCore.Authorization.Authorize(Roles = "Admin")]
+    [Authorize(Roles = "Admin")]
     public class AdminFeeTypesController : ControllerBase
     {
         private readonly IFeeTypeRepository repository;

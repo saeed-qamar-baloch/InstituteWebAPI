@@ -1,5 +1,6 @@
 ﻿using AutoMapper;
 using InstituteWebAPI.Models.DTO.Villages;
+using Microsoft.AspNetCore.Authorization;
 using InstituteWebAPI.Repositories.IRepository;
 using InstituteWebApp.Models.Domain;
 using Microsoft.AspNetCore.Http;
@@ -10,6 +11,7 @@ namespace InstituteWebAPI.Controllers
     [Route("api/[controller]")]
     [ApiController]
     [Microsoft.AspNetCore.Authorization.Authorize(Roles = "Admin")]
+    [Authorize(Roles = "Admin")]
     public class AdminVillageController : ControllerBase
     {
         private readonly IVillageRepository villageRepository;
