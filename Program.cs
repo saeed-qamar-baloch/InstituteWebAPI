@@ -292,21 +292,24 @@ Directory.CreateDirectory(Path.Combine(imagesRoot, "Teachers"));
 Directory.CreateDirectory(Path.Combine(imagesRoot, "Institute"));
 Directory.CreateDirectory(Path.Combine(imagesRoot, "Website"));
 
-app.UseStaticFiles(
-    new StaticFileOptions
+// PUBLIC images only: website content (Website) and the institute logo (Institute).
+// Student/Teacher photos are PII and are NOT served here — they are behind
+// /api/secure-image which requires an authenticated Admin/Teacher.
+foreach (var publicFolder in new[] { "Website", "Institute" })
+{
+    var dir = Path.Combine(imagesRoot, publicFolder);
+    Directory.CreateDirectory(dir);
+    app.UseStaticFiles(new StaticFileOptions
     {
-        FileProvider = new PhysicalFileProvider(imagesRoot),
-        RequestPath = "/images",
-        // Allow the SPA (different origin) to read these images onto a <canvas>
-        // for ID cards / admit cards without tainting it.
+        FileProvider = new PhysicalFileProvider(dir),
+        RequestPath = "/images/" + publicFolder,
         OnPrepareResponse = ctx =>
         {
             ctx.Context.Response.Headers["Access-Control-Allow-Origin"] = "*";
             ctx.Context.Response.Headers["Access-Control-Allow-Methods"] = "GET";
         }
-    }
-
-    );
+    });
+}
 
 app.UseAuthentication();
 app.UseAuthorization();
