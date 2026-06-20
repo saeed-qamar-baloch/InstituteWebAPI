@@ -283,9 +283,8 @@ app.UseCors("RozhnCorsPolicy");
 
 app.UseRateLimiter();
 
-app.UseAuthentication();
-app.UseAuthorization();
-
+// Public content/profile images are served BEFORE auth so the global fallback
+// authorization policy does not block them (they must stay publicly readable).
 // Ensure Images subdirectories exist — prevents crash if deploy skips them
 var imagesRoot = Path.Combine(Directory.GetCurrentDirectory(), "Images");
 Directory.CreateDirectory(Path.Combine(imagesRoot, "Students"));
@@ -308,6 +307,9 @@ app.UseStaticFiles(
     }
 
     );
+
+app.UseAuthentication();
+app.UseAuthorization();
 
 app.MapControllers();
 app.Run();
