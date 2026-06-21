@@ -18,6 +18,7 @@ using InstituteWebAPI.Services.StudentMonthlyResults;
 using InstituteWebAPI.Services.FeeManagement;
 using InstituteWebAPI.Models.Configuration;
 using InstituteWebAPI.BackgroundJobs;
+using InstituteWebAPI.Services.Storage;
 using Microsoft.AspNetCore.Diagnostics;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -80,6 +81,7 @@ builder.Services.AddControllers()
         };
     });
 builder.Services.AddHttpContextAccessor();
+builder.Services.AddSingleton<ImageStorage>();
 // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen(options =>
@@ -291,7 +293,8 @@ app.UseRateLimiter();
 // which would make this look in the wrong folder, find nothing, and fall through
 // to the global auth FallbackPolicy (401) instead of serving the file.
 // Ensure Images subdirectories exist — prevents crash if deploy skips them
-var imagesRoot = Path.Combine(app.Environment.ContentRootPath, "Images");
+var imageStorage = app.Services.GetRequiredService<ImageStorage>();
+var imagesRoot = imageStorage.RootPath;
 Directory.CreateDirectory(Path.Combine(imagesRoot, "Students"));
 Directory.CreateDirectory(Path.Combine(imagesRoot, "Teachers"));
 Directory.CreateDirectory(Path.Combine(imagesRoot, "Institute"));
@@ -315,6 +318,20 @@ foreach (var publicFolder in new[] { "Website", "Institute" })
         }
     });
 }
+
+// A missing public image must be a 404. Without this terminal check the request
+// reaches the global authorization fallback and is incorrectly reported as 401.
+app.Use(async (context, next) =>
+{
+    if (context.Request.Path.StartsWithSegments("/images/Website") ||
+        context.Request.Path.StartsWithSegments("/images/Institute"))
+    {
+        context.Response.StatusCode = StatusCodes.Status404NotFound;
+        return;
+    }
+
+    await next();
+});
 
 app.UseAuthentication();
 app.UseAuthorization();

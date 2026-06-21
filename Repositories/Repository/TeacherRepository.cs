@@ -1,18 +1,19 @@
 ﻿using InstituteWebAPI.Data;
 using InstituteWebApp.Models.Domain;
+using InstituteWebAPI.Services.Storage;
 using Microsoft.AspNetCore.Mvc.TagHelpers;
 using Microsoft.EntityFrameworkCore;
 
 public class TeacherRepository : ITeacherRepository
 {
     private readonly RozhnInstituteDbContext dbContext;
-    private readonly IWebHostEnvironment webHostEnvironment;
+    private readonly ImageStorage imageStorage;
     private readonly IHttpContextAccessor httpContextAccessor;
 
-    public TeacherRepository(RozhnInstituteDbContext dbContext, IWebHostEnvironment webHostEnvironment, IHttpContextAccessor httpContextAccessor)
+    public TeacherRepository(RozhnInstituteDbContext dbContext, ImageStorage imageStorage, IHttpContextAccessor httpContextAccessor)
     {
         this.dbContext = dbContext;
-        this.webHostEnvironment = webHostEnvironment;
+        this.imageStorage = imageStorage;
         this.httpContextAccessor = httpContextAccessor;
     }
 
@@ -37,7 +38,7 @@ public class TeacherRepository : ITeacherRepository
         {
             var fileExtension = Path.GetExtension(teacher.file.FileName);
 
-            var localFilePath = Path.Combine(webHostEnvironment.ContentRootPath, "Images", "Teachers", $"{teacher.RegistrationNo}{fileExtension}");
+            var localFilePath = Path.Combine(imageStorage.GetFolder("Teachers"), $"{teacher.RegistrationNo}{fileExtension}");
             var urlPath = $"{httpContextAccessor.HttpContext.Request.Scheme}://{httpContextAccessor.HttpContext.Request.Host}{httpContextAccessor.HttpContext.Request.PathBase}/images/Teachers/{teacher.RegistrationNo}{fileExtension}";
 
             using var stream = new FileStream(localFilePath, FileMode.Create);
@@ -96,7 +97,7 @@ public class TeacherRepository : ITeacherRepository
         {
             var fileExtension = Path.GetExtension(updated.file.FileName);
 
-            var localFilePath = Path.Combine(webHostEnvironment.ContentRootPath, "Images", "Teachers", $"{teacher.RegistrationNo}{fileExtension}");
+            var localFilePath = Path.Combine(imageStorage.GetFolder("Teachers"), $"{teacher.RegistrationNo}{fileExtension}");
             var urlPath = $"{httpContextAccessor.HttpContext.Request.Scheme}://{httpContextAccessor.HttpContext.Request.Host}{httpContextAccessor.HttpContext.Request.PathBase}/images/Teachers/{teacher.RegistrationNo}{fileExtension}";
 
             using var stream = new FileStream(localFilePath, FileMode.Create);

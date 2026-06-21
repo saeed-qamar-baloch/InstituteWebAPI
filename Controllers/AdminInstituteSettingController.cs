@@ -1,4 +1,5 @@
 using InstituteWebAPI.Data;
+using InstituteWebAPI.Services.Storage;
 using InstituteWebApp.Models.Domain;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -12,13 +13,13 @@ namespace InstituteWebAPI.Controllers
     public class AdminInstituteSettingController : ControllerBase
     {
         private readonly RozhnInstituteDbContext dbContext;
-        private readonly IWebHostEnvironment env;
+        private readonly ImageStorage imageStorage;
         private readonly IHttpContextAccessor http;
 
-        public AdminInstituteSettingController(RozhnInstituteDbContext dbContext, IWebHostEnvironment env, IHttpContextAccessor http)
+        public AdminInstituteSettingController(RozhnInstituteDbContext dbContext, ImageStorage imageStorage, IHttpContextAccessor http)
         {
             this.dbContext = dbContext;
-            this.env = env;
+            this.imageStorage = imageStorage;
             this.http = http;
         }
 
@@ -118,7 +119,7 @@ namespace InstituteWebAPI.Controllers
             var ext = Path.GetExtension(file.FileName);
             if (string.IsNullOrWhiteSpace(ext)) ext = ".png";
 
-            var dir = Path.Combine(env.ContentRootPath, "Images", "Institute");
+            var dir = imageStorage.GetFolder("Institute");
             Directory.CreateDirectory(dir);
             var fileName = $"logo{ext.ToLowerInvariant()}";
             var path = Path.Combine(dir, fileName);

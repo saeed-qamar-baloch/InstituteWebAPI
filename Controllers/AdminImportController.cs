@@ -1,4 +1,5 @@
 using InstituteWebAPI.Data;
+using InstituteWebAPI.Services.Storage;
 using InstituteWebApp.Models.Domain;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -13,12 +14,12 @@ namespace InstituteWebAPI.Controllers
     public class AdminImportController : ControllerBase
     {
         private readonly RozhnInstituteDbContext db;
-        private readonly IWebHostEnvironment env;
+        private readonly ImageStorage imageStorage;
         private readonly IHttpContextAccessor http;
 
-        public AdminImportController(RozhnInstituteDbContext db, IWebHostEnvironment env, IHttpContextAccessor http)
+        public AdminImportController(RozhnInstituteDbContext db, ImageStorage imageStorage, IHttpContextAccessor http)
         {
-            this.db = db; this.env = env; this.http = http;
+            this.db = db; this.imageStorage = imageStorage; this.http = http;
         }
 
         // ── helpers ───────────────────────────────────────────────────────────
@@ -1113,7 +1114,7 @@ namespace InstituteWebAPI.Controllers
 
             var ext = Path.GetExtension(file.FileName);
             if (string.IsNullOrWhiteSpace(ext)) ext = ".jpg";
-            var dir = Path.Combine(env.ContentRootPath, "Images", "Students");
+            var dir = imageStorage.GetFolder("Students");
             Directory.CreateDirectory(dir);
             var path = Path.Combine(dir, $"{regNo}{ext}");
             using (var fs = new FileStream(path, FileMode.Create)) await file.CopyToAsync(fs);

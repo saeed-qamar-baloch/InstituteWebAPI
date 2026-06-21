@@ -1,3 +1,4 @@
+using InstituteWebAPI.Services.Storage;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -14,6 +15,12 @@ namespace InstituteWebAPI.Controllers
     public class SecureImageController : ControllerBase
     {
         private static readonly string[] AllowedFolders = { "Students", "Teachers" };
+        private readonly ImageStorage imageStorage;
+
+        public SecureImageController(ImageStorage imageStorage)
+        {
+            this.imageStorage = imageStorage;
+        }
 
         // GET api/secure-image/Students/RZKG-Jan26-001.jpg   (also Teachers)
         [HttpGet("{folder}/{name}")]
@@ -27,7 +34,7 @@ namespace InstituteWebAPI.Controllers
                 name.Contains('/') || name.Contains('\\'))
                 return BadRequest();
 
-            var path = Path.Combine(Directory.GetCurrentDirectory(), "Images", folder, name);
+            var path = Path.Combine(imageStorage.GetFolder(folder), name);
             if (!System.IO.File.Exists(path))
                 return NotFound();
 

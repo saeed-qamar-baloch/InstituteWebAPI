@@ -1,6 +1,7 @@
 ﻿// StudentRepository.cs
 using InstituteWebAPI.Data;
 using InstituteWebAPI.Repositories.IRepository;
+using InstituteWebAPI.Services.Storage;
 using InstituteWebApp.Models.Domain;
 using Microsoft.EntityFrameworkCore;
 using SixLabors.ImageSharp;
@@ -12,13 +13,13 @@ namespace InstituteWebAPI.Repositories.Repository
     public class StudentRepository : IStudentRepository
     {
         private readonly RozhnInstituteDbContext _DbContext;
-        private readonly IWebHostEnvironment webHostEnvironment;
+        private readonly ImageStorage imageStorage;
         private readonly IHttpContextAccessor httpContextAccessor;
 
-        public StudentRepository(RozhnInstituteDbContext _DBContext, IWebHostEnvironment webHostEnvironment, IHttpContextAccessor httpContextAccessor)
+        public StudentRepository(RozhnInstituteDbContext _DBContext, ImageStorage imageStorage, IHttpContextAccessor httpContextAccessor)
         {
             _DbContext = _DBContext;
-            this.webHostEnvironment = webHostEnvironment;
+            this.imageStorage = imageStorage;
             this.httpContextAccessor = httpContextAccessor;
 
         }
@@ -121,7 +122,7 @@ namespace InstituteWebAPI.Repositories.Repository
             if (student.file != null && student.file.Length > 0)
             {
                 var fileExtension = Path.GetExtension(student.file.FileName);
-                var localFilePath = Path.Combine(webHostEnvironment.ContentRootPath, "Images", "Students", $"{student.RegistrationNo}{fileExtension}");
+                var localFilePath = Path.Combine(imageStorage.GetFolder("Students"), $"{student.RegistrationNo}{fileExtension}");
 
                 using (var image = await Image.LoadAsync(student.file.OpenReadStream()))
                 {
@@ -155,7 +156,7 @@ namespace InstituteWebAPI.Repositories.Repository
             {
                 var fileExtension = Path.GetExtension(student.file.FileName);
 
-                var localFilePath = Path.Combine(webHostEnvironment.ContentRootPath, "Images", "Students", $"{existing.RegistrationNo}{fileExtension}");
+                var localFilePath = Path.Combine(imageStorage.GetFolder("Students"), $"{existing.RegistrationNo}{fileExtension}");
                 using (var image = await Image.LoadAsync(student.file.OpenReadStream()))
                 {
                     image.Mutate(x => x.Resize(600, 0));

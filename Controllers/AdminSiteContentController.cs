@@ -1,4 +1,5 @@
 using InstituteWebAPI.Data;
+using InstituteWebAPI.Services.Storage;
 using InstituteWebApp.Models.Domain;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -13,12 +14,12 @@ namespace InstituteWebAPI.Controllers
     public class AdminSiteContentController : ControllerBase
     {
         private readonly RozhnInstituteDbContext dbContext;
-        private readonly IWebHostEnvironment env;
+        private readonly ImageStorage imageStorage;
 
-        public AdminSiteContentController(RozhnInstituteDbContext dbContext, IWebHostEnvironment env)
+        public AdminSiteContentController(RozhnInstituteDbContext dbContext, ImageStorage imageStorage)
         {
             this.dbContext = dbContext;
-            this.env = env;
+            this.imageStorage = imageStorage;
         }
 
         // GET api/AdminSiteContent — all blocks
@@ -74,7 +75,7 @@ namespace InstituteWebAPI.Controllers
             if (!allowed.Contains(ext)) return BadRequest("Only image files are allowed.");
 
             var name = $"content-{Guid.NewGuid()}{ext}";
-            var path = Path.Combine(env.ContentRootPath, "Images", "Website", name);
+            var path = Path.Combine(imageStorage.GetFolder("Website"), name);
             using (var fs = new FileStream(path, FileMode.Create))
                 await file.CopyToAsync(fs);
 

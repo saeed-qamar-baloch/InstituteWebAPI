@@ -1,5 +1,6 @@
 ﻿using InstituteWebAPI.Data;
 using InstituteWebAPI.Repositories.IRepository;
+using InstituteWebAPI.Services.Storage;
 using InstituteWebApp.Models.Domain;
 using Microsoft.EntityFrameworkCore;
 
@@ -8,16 +9,16 @@ namespace InstituteWebAPI.Repositories.Repository
     public class WebsitePostRepository : IWebsitePostRepository
     {
         private readonly RozhnInstituteDbContext dbContext;
-        private readonly IWebHostEnvironment webHostEnvironment;
+        private readonly ImageStorage imageStorage;
         private readonly IHttpContextAccessor httpContextAccessor;
 
         public WebsitePostRepository(
             RozhnInstituteDbContext dbContext,
-            IWebHostEnvironment webHostEnvironment,
+            ImageStorage imageStorage,
             IHttpContextAccessor httpContextAccessor)
         {
             this.dbContext = dbContext;
-            this.webHostEnvironment = webHostEnvironment;
+            this.imageStorage = imageStorage;
             this.httpContextAccessor = httpContextAccessor;
         }
 
@@ -129,7 +130,7 @@ namespace InstituteWebAPI.Repositories.Repository
             var fileExtension = Path.GetExtension(post.file.FileName);
             var fileName = $"{post.WebsitePostID}{fileExtension}";
 
-            var localFilePath = Path.Combine(webHostEnvironment.ContentRootPath, "Images", "Website", fileName);
+            var localFilePath = Path.Combine(imageStorage.GetFolder("Website"), fileName);
             var request = httpContextAccessor.HttpContext!.Request;
             var urlPath = $"{request.Scheme}://{request.Host}{request.PathBase}/images/Website/{fileName}";
 
