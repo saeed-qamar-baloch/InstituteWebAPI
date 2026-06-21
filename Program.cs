@@ -49,10 +49,10 @@ builder.Services.AddRateLimiter(options =>
 {
     options.AddFixedWindowLimiter("login", o =>
     {
-        o.PermitLimit         = 10;
-        o.Window              = TimeSpan.FromMinutes(5);
+        o.PermitLimit = 10;
+        o.Window = TimeSpan.FromMinutes(5);
         o.QueueProcessingOrder = QueueProcessingOrder.OldestFirst;
-        o.QueueLimit          = 0;
+        o.QueueLimit = 0;
     });
     options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
 });
@@ -260,13 +260,13 @@ else
         errApp.Run(async context =>
         {
             var feature = context.Features.Get<IExceptionHandlerPathFeature>();
-            var logger  = context.RequestServices
+            var logger = context.RequestServices
                 .GetRequiredService<ILoggerFactory>()
                 .CreateLogger("GlobalExceptionHandler");
             logger.LogError(feature?.Error, "Unhandled exception on {Method} {Path}",
                 context.Request.Method, context.Request.Path);
 
-            context.Response.StatusCode  = StatusCodes.Status500InternalServerError;
+            context.Response.StatusCode = StatusCodes.Status500InternalServerError;
             context.Response.ContentType = "application/json";
             await context.Response.WriteAsJsonAsync(new
             {
@@ -285,8 +285,13 @@ app.UseRateLimiter();
 
 // Public content/profile images are served BEFORE auth so the global fallback
 // authorization policy does not block them (they must stay publicly readable).
+// IMPORTANT: use ContentRootPath (same base every upload controller/repository
+// uses to SAVE these files), not Directory.GetCurrentDirectory() — under systemd
+// the process CWD depends on WorkingDirectory= and can differ from ContentRootPath,
+// which would make this look in the wrong folder, find nothing, and fall through
+// to the global auth FallbackPolicy (401) instead of serving the file.
 // Ensure Images subdirectories exist — prevents crash if deploy skips them
-var imagesRoot = Path.Combine(Directory.GetCurrentDirectory(), "Images");
+var imagesRoot = Path.Combine(app.Environment.ContentRootPath, "Images");
 Directory.CreateDirectory(Path.Combine(imagesRoot, "Students"));
 Directory.CreateDirectory(Path.Combine(imagesRoot, "Teachers"));
 Directory.CreateDirectory(Path.Combine(imagesRoot, "Institute"));
