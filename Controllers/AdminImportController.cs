@@ -395,17 +395,18 @@ namespace InstituteWebAPI.Controllers
                     var student = await db.Students.FirstOrDefaultAsync(s => s.RegistrationNo == reg);
                     if (student == null) { res.Errors.Add($"Row {i + 2}: student {reg} not found — import the Student List first."); continue; }
 
-                    // Class
+                    // Class — looked up only, never created here. Classes are created by the
+                    // Marks import for the relevant term; if a class named in this sheet
+                    // doesn't exist yet, the admission is still created/updated but left
+                    // unassigned to a class (and not enrolled into a current-class/term slot)
+                    // until Marks import creates it.
                     var className = S(r.ClassName);
                     Classes? cls = null;
                     if (className.Length > 0)
                     {
                         cls = classes.FirstOrDefault(c => c.ClassName.Equals(className, StringComparison.OrdinalIgnoreCase));
                         if (cls == null)
-                        {
-                            cls = new Classes { ClassID = Guid.NewGuid(), ClassName = className, CourseID = course.CourseID, Rank = 0 };
-                            db.Classes.Add(cls); classes.Add(cls);
-                        }
+                            res.Errors.Add($"Row {i + 2} ({reg}): class \"{className}\" doesn't exist yet — admission saved without class assignment; import Marks for this term first to create it.");
                     }
 
                     // Slot
