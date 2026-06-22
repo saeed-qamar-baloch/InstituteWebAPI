@@ -460,9 +460,12 @@ namespace InstituteWebAPI.Controllers
                     }
 
                     // Admission (update active one if present, else create)
+                    // AdmissionDate is NOT read from the sheet — it's taken from the student's
+                    // own RegDate (set when the Student List was imported), per business rule.
                     var dueDay  = DayOfMonth(r.DueDate);
-                    var regDate = Date(r.AdmissionDate) ?? DateTime.Now;
+                    var regDate = student.RegDate;
                     var fee     = Dec(r.Fee);
+                    const decimal admissionFee = 300m;   // fixed admission fee for all imported admissions
 
                     var admission = await db.Admissions
                         .Where(a => a.StudentID == student.StudentID && a.IsActive)
@@ -479,7 +482,7 @@ namespace InstituteWebAPI.Controllers
                             AdmittedClassID = cls?.ClassID,
                             RegistrationDate = regDate,
                             MonthlyFee = fee,
-                            AdmissionFee = 0m,
+                            AdmissionFee = admissionFee,
                             DueDate = dueDay,
                             Status = "Active",
                             IsActive = true,
@@ -495,6 +498,7 @@ namespace InstituteWebAPI.Controllers
                         admission.AdmittedClassID = cls?.ClassID ?? admission.AdmittedClassID;
                         admission.RegistrationDate = regDate;
                         admission.MonthlyFee = fee;
+                        admission.AdmissionFee = admissionFee;
                         admission.DueDate = dueDay;
                         admission.ModifiedAt = DateTime.Now;
                         res.Updated++;
