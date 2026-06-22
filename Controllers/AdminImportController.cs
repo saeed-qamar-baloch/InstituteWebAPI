@@ -24,6 +24,8 @@ namespace InstituteWebAPI.Controllers
 
         // ── helpers ───────────────────────────────────────────────────────────
         private static string S(string? v) => (v ?? "").Trim();
+        // Same as S(), but returns the literal "N/A" instead of an empty string for blank/null cells.
+        private static string OrNA(string? v) { var s = S(v); return s.Length > 0 ? s : "N/A"; }
         private static decimal Dec(decimal? v) => v ?? 0m;
         private static DateTime? Date(string? v)
         {
@@ -1029,6 +1031,7 @@ namespace InstituteWebAPI.Controllers
         // ════════ TEACHERS (flexible) ════════
         public class TeacherRow
         {
+            public string? RegNo { get; set; }       // Reg.No — now taken from the sheet, no longer auto-generated
             public string? Name { get; set; }
             public string? FatherName { get; set; }
             public string? Gender { get; set; }
@@ -1046,6 +1049,7 @@ namespace InstituteWebAPI.Controllers
             public string? RegDate { get; set; }
             public string? Email { get; set; }
             public string? Skills { get; set; }
+            public string? Status { get; set; }       // "Left"/"Inactive"/"Resigned" → IsTeaching = false
         }
 
         [HttpPost("teachers")]
@@ -1058,45 +1062,49 @@ namespace InstituteWebAPI.Controllers
             for (int i = 0; i < rows.Count; i++)
             {
                 var r = rows[i];
+                var regNo = S(r.RegNo);
+                if (regNo.Length == 0) { res.Errors.Add($"Row {i + 2}: missing Reg.No"); continue; }
                 var name = S(r.Name);
-                if (name.Length == 0) { res.Errors.Add($"Row {i + 2}: missing Name"); continue; }
-                var father = S(r.FatherName);
-                if (await db.Teachers.AnyAsync(t => t.TeacherName == name && t.FatherName == father)) { res.Skipped++; continue; }
+                if (name.Length == 0) { res.Errors.Add($"Row {i + 2} ({regNo}): missing Name"); continue; }
+                if (await db.Teachers.AnyAsync(t => t.RegistrationNo == regNo)) { res.Skipped++; continue; }
 
                 try
                 {
-                    var serial = ++maxSerial;
                     var regDate = Date(r.RegDate) ?? DateTime.Now;
+                    var status = S(r.Status);
+                    var isLeft = status.Equals("Left", StringComparison.OrdinalIgnoreCase)
+                              || status.Equals("Inactive", StringComparison.OrdinalIgnoreCase)
+                              || status.Equals("Resigned", StringComparison.OrdinalIgnoreCase);
                     var teacher = new Teachers
                     {
                         TeacherID = Guid.NewGuid(),
-                        Serial = serial,
-                        RegistrationNo = $"RZST-{regDate:MMMyy}-{serial:D3}",
+                        Serial = ++maxSerial,
+                        RegistrationNo = regNo,
                         TeacherName = name,
-                        FatherName = father,
-                        Gender = S(r.Gender).Length > 0 ? S(r.Gender) : "—",
+                        FatherName = OrNA(r.FatherName),
+                        Gender = OrNA(r.Gender),
                         DateOfBirth = Date(r.Dob) ?? new DateTime(1900, 1, 1),
-                        Address = S(r.Address),
-                        City = S(r.City),
-                        Region = S(r.Region),
-                        EmergencyContact = S(r.EmergencyContact),
-                        Contact = S(r.Contact),
-                        FatherOccupation = S(r.Occupation),
-                        Qualification = S(r.Qualification),
-                        Institute = S(r.Institute),
-                        Cnic = S(r.Cnic),
+                        Address = OrNA(r.Address),
+                        City = OrNA(r.City),
+                        Region = OrNA(r.Region),
+                        EmergencyContact = OrNA(r.EmergencyContact),
+                        Contact = OrNA(r.Contact),
+                        FatherOccupation = OrNA(r.Occupation),
+                        Qualification = OrNA(r.Qualification),
+                        Institute = OrNA(r.Institute),
+                        Cnic = OrNA(r.Cnic),
                         Picture = "",
-                        Experience = S(r.Experience),
-                        Email = S(r.Email).Length > 0 ? S(r.Email) : null,
-                        Skills = S(r.Skills).Length > 0 ? S(r.Skills) : null,
+                        Experience = OrNA(r.Experience),
+                        Email = OrNA(r.Email),
+                        Skills = OrNA(r.Skills),
                         RegistrationDate = regDate,
-                        IsTeaching = true,
+                        IsTeaching = !isLeft,
                     };
                     db.Teachers.Add(teacher);
                     await db.SaveChangesAsync();
                     res.Created++;
                 }
-                catch (Exception ex) { res.Errors.Add($"Row {i + 2} ({name}): {ex.Message}"); }
+                catch (Exception ex) { res.Errors.Add($"Row {i + 2} ({regNo}): {ex.Message}"); }
             }
             return Ok(res);
         }
@@ -1121,6 +1129,30 @@ namespace InstituteWebAPI.Controllers
 
             var req = http.HttpContext!.Request;
             student.Picture = $"{req.Scheme}://{req.Host}{req.PathBase}/images/Students/{regNo}{ext}";
+            await db.SaveChangesAsync();
+            return Ok(new { matched = true });
+        }
+
+        // ════════ TEACHER PHOTO (matched by RegNo) ════════
+        [HttpPost("teacher-photo")]
+        public async Task<IActionResult> ImportTeacherPhoto([FromForm] string regNo, IFormFile file)
+        {
+            regNo = S(regNo);
+            if (string.IsNullOrWhiteSpace(regNo) || file == null || file.Length == 0)
+                return BadRequest(new { message = "regNo and file are required." });
+
+            var teacher = await db.Teachers.FirstOrDefaultAsync(t => t.RegistrationNo == regNo);
+            if (teacher == null) return Ok(new { matched = false });
+
+            var ext = Path.GetExtension(file.FileName);
+            if (string.IsNullOrWhiteSpace(ext)) ext = ".jpg";
+            var dir = imageStorage.GetFolder("Teachers");
+            Directory.CreateDirectory(dir);
+            var path = Path.Combine(dir, $"{regNo}{ext}");
+            using (var fs = new FileStream(path, FileMode.Create)) await file.CopyToAsync(fs);
+
+            var req = http.HttpContext!.Request;
+            teacher.Picture = $"{req.Scheme}://{req.Host}{req.PathBase}/images/Teachers/{regNo}{ext}";
             await db.SaveChangesAsync();
             return Ok(new { matched = true });
         }

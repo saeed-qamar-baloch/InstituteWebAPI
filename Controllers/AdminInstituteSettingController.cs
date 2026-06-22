@@ -53,6 +53,21 @@ namespace InstituteWebAPI.Controllers
                      .Select(x => int.TryParse(x, out var n) ? n : 0)
                      .Where(n => n >= 1 && n <= 7).Distinct().ToList();
 
+        private string? ExistingLogoUrl(string? logoUrl)
+        {
+            if (string.IsNullOrWhiteSpace(logoUrl)) return null;
+
+            var path = Uri.TryCreate(logoUrl, UriKind.Absolute, out var uri)
+                ? uri.AbsolutePath
+                : logoUrl.Split('?', '#')[0];
+            var fileName = Path.GetFileName(path);
+            if (string.IsNullOrWhiteSpace(fileName)) return null;
+
+            return System.IO.File.Exists(Path.Combine(imageStorage.GetFolder("Institute"), fileName))
+                ? logoUrl
+                : null;
+        }
+
         private async Task<InstituteSetting> GetOrCreateAsync()
         {
             var s = await dbContext.InstituteSettings.FirstOrDefaultAsync();
@@ -73,7 +88,7 @@ namespace InstituteWebAPI.Controllers
             {
                 OffDays = Parse(s.OffDays),
                 InstituteName = s.InstituteName ?? "Rozhn Institute",
-                LogoUrl = s.LogoUrl,
+                LogoUrl = ExistingLogoUrl(s.LogoUrl),
                 Tagline = s.Tagline,
                 Address = s.Address,
                 Phone = s.Phone,
