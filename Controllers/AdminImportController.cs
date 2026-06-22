@@ -372,20 +372,12 @@ namespace InstituteWebAPI.Controllers
             var res = new ImportResult();
             if (rows == null || rows.Count == 0) return Ok(res);
 
-            var term = await db.Term.Where(t => t.IsActive).OrderByDescending(t => t.TermStart).FirstOrDefaultAsync();
-            if (term == null) { res.Errors.Add("No active term found. Set an active term first."); return Ok(res); }
-
             var course = await db.Courses.FirstOrDefaultAsync(c => c.CourseName == "Language");
             if (course == null)
             {
                 course = new Courses { CourseID = Guid.NewGuid(), CourseName = "Language", CourseDescription = "Imported", CourseStatus = true };
                 db.Courses.Add(course); await db.SaveChangesAsync();
             }
-
-            var classes        = await db.Classes.Where(c => c.CourseID == course.CourseID).ToListAsync();
-            var slots          = await db.Slots.Where(s => s.CourseID == course.CourseID).ToListAsync();
-            var teachers       = await db.Teachers.ToListAsync();
-            var currentClasses = await db.CurrentClasses.Where(cc => cc.TermID == term.TermID).ToListAsync();
 
             for (int i = 0; i < rows.Count; i++)
             {
@@ -398,78 +390,23 @@ namespace InstituteWebAPI.Controllers
                     var student = await db.Students.FirstOrDefaultAsync(s => s.RegistrationNo == reg);
                     if (student == null) { res.Errors.Add($"Row {i + 2}: student {reg} not found — import the Student List first."); continue; }
 
-                    // Class — looked up only, never created here. Classes are created by the
-                    // Marks import for the relevant term; if a class named in this sheet
-                    // doesn't exist yet, the admission is still created/updated but left
-                    // unassigned to a class (and not enrolled into a current-class/term slot)
-                    // until Marks import creates it.
-                    var className = S(r.ClassName);
-                    Classes? cls = null;
-                    if (className.Length > 0)
-                    {
-                        cls = classes.FirstOrDefault(c => c.ClassName.Equals(className, StringComparison.OrdinalIgnoreCase));
-                        if (cls == null)
-                            res.Errors.Add($"Row {i + 2} ({reg}): class \"{className}\" doesn't exist yet — admission saved without class assignment; import Marks for this term first to create it.");
-                    }
+                    // Class, Slot, and Teacher columns are intentionally ignored — this import
+                    // only creates/updates the admission record. Classes (and assigning
+                    // students to them) are created solely by the Marks import for the
+                    // relevant term, never here.
+                    var dueDay = DayOfMonth(r.DueDate);
+                    var fee    = Dec(r.Fee);
 
-                    // Slot
-                    var slotName = S(r.Slot);
-                    Slots? slot = null;
-                    if (slotName.Length > 0)
-                    {
-                        slot = slots.FirstOrDefault(s => s.SlotName.Equals(slotName, StringComparison.OrdinalIgnoreCase));
-                        if (slot == null)
-                        {
-                            slot = new Slots
-                            {
-                                SlotID = Guid.NewGuid(),
-                                SlotName = slotName,
-                                CourseID = course.CourseID,
-                                TermID = term.TermID,
-                                StartTime = DateTime.Today,
-                                EndTime = DateTime.Today,
-                            };
-                            db.Slots.Add(slot); slots.Add(slot);
-                        }
-                    }
+                    // A blank/non-numeric Fee or a blank/unparsable Due Date (e.g. the cell
+                    // literally says "Free") means this student isn't charged — mark the
+                    // admission free so no monthly/admission dues ever get generated for it.
+                    var isFree = fee <= 0 || dueDay == null;
 
-                    // Teacher (match by name only; leave unassigned if not found)
-                    var teacherName = S(r.Teacher);
-                    Teachers? teacher = teacherName.Length > 0
-                        ? teachers.FirstOrDefault(t => t.TeacherName.Equals(teacherName, StringComparison.OrdinalIgnoreCase))
-                        : null;
+                    const decimal admissionFee = 200m; // fixed admission fee for all imported admissions
 
-                    // Current class for the active term (find or create)
-                    CurrentClass? cc = null;
-                    if (cls != null)
-                    {
-                        cc = currentClasses.FirstOrDefault(x => x.ClassID == cls.ClassID
-                                && x.SlotID == slot?.SlotID
-                                && x.TeacherID == teacher?.TeacherID
-                                && x.TermID == term.TermID);
-                        if (cc == null)
-                        {
-                            cc = new CurrentClass
-                            {
-                                CurrentClassID = Guid.NewGuid(),
-                                ClassID = cls.ClassID,
-                                SlotID = slot?.SlotID,
-                                TeacherID = teacher?.TeacherID,
-                                TermID = term.TermID,
-                                IsActive = true,
-                                CreatedOn = DateTime.Now,
-                            };
-                            db.CurrentClasses.Add(cc); currentClasses.Add(cc);
-                        }
-                    }
-
-                    // Admission (update active one if present, else create)
                     // AdmissionDate is NOT read from the sheet — it's taken from the student's
                     // own RegDate (set when the Student List was imported), per business rule.
-                    var dueDay  = DayOfMonth(r.DueDate);
                     var regDate = student.RegDate;
-                    var fee     = Dec(r.Fee);
-                    const decimal admissionFee = 300m;   // fixed admission fee for all imported admissions
 
                     var admission = await db.Admissions
                         .Where(a => a.StudentID == student.StudentID && a.IsActive)
@@ -483,14 +420,14 @@ namespace InstituteWebAPI.Controllers
                             AdmissionID = Guid.NewGuid(),
                             StudentID = student.StudentID,
                             CourseID = course.CourseID,
-                            AdmittedClassID = cls?.ClassID,
+                            AdmittedClassID = null,
                             RegistrationDate = regDate,
-                            MonthlyFee = fee,
-                            AdmissionFee = admissionFee,
-                            DueDate = dueDay,
+                            MonthlyFee = isFree ? 0 : fee,
+                            AdmissionFee = isFree ? 0 : admissionFee,
+                            DueDate = isFree ? null : dueDay,
                             Status = "Active",
                             IsActive = true,
-                            IsFree = false,
+                            IsFree = isFree,
                             CreatedAt = DateTime.Now,
                             ModifiedAt = DateTime.Now,
                         });
@@ -499,36 +436,13 @@ namespace InstituteWebAPI.Controllers
                     else
                     {
                         admission.CourseID = course.CourseID;
-                        admission.AdmittedClassID = cls?.ClassID ?? admission.AdmittedClassID;
                         admission.RegistrationDate = regDate;
-                        admission.MonthlyFee = fee;
-                        admission.AdmissionFee = admissionFee;
-                        admission.DueDate = dueDay;
+                        admission.MonthlyFee = isFree ? 0 : fee;
+                        admission.AdmissionFee = isFree ? 0 : admissionFee;
+                        admission.DueDate = isFree ? null : dueDay;
+                        admission.IsFree = isFree;
                         admission.ModifiedAt = DateTime.Now;
                         res.Updated++;
-                    }
-
-                    // Enrolment in the active term (one per student per term)
-                    if (cc != null)
-                    {
-                        var existingEnroll = await db.ClassStudents
-                            .Include(e => e.CurrentClass)
-                            .FirstOrDefaultAsync(e => e.StudentID == student.StudentID && e.CurrentClass.TermID == term.TermID);
-                        if (existingEnroll == null)
-                        {
-                            db.ClassStudents.Add(new ClassStudents
-                            {
-                                ClassStudentID = Guid.NewGuid(),
-                                CurrentClassID = cc.CurrentClassID,
-                                StudentID = student.StudentID,
-                                Status = "Enrolled",
-                            });
-                        }
-                        else
-                        {
-                            existingEnroll.CurrentClassID = cc.CurrentClassID;
-                            existingEnroll.Status = "Enrolled";
-                        }
                     }
 
                     await db.SaveChangesAsync();
@@ -538,11 +452,6 @@ namespace InstituteWebAPI.Controllers
                     res.Errors.Add($"Row {i + 2} ({reg}): {ex.Message}");
                 }
             }
-
-            // Normalise any leftover enrolment status so attendance/marks show students.
-            await db.ClassStudents
-                .Where(cs => cs.Status == "Active")
-                .ExecuteUpdateAsync(s => s.SetProperty(x => x.Status, "Enrolled"));
 
             return Ok(res);
         }
