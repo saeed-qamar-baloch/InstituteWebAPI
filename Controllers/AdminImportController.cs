@@ -59,6 +59,9 @@ namespace InstituteWebAPI.Controllers
             public int Skipped { get; set; }
             public int Updated { get; set; }
             public List<string> Errors { get; set; } = new();
+            // Row-by-row reasons for rows counted in Skipped (not every import populates
+            // this — only the ones where a silent skip needed an explanation).
+            public List<string> SkippedDetails { get; set; } = new();
         }
 
         // ════════ STUDENTS (+ admission) ════════
@@ -1014,7 +1017,11 @@ namespace InstituteWebAPI.Controllers
                     // Idempotency: skip if a payment with this receipt already exists for the student
                     if (receipt.Length > 0 &&
                         await db.Payments.AnyAsync(p => p.StudentId == student.StudentID && p.Remarks == receipt))
-                    { res.Skipped++; continue; }
+                    {
+                        res.Skipped++;
+                        res.SkippedDetails.Add($"Row {i + 2} ({reg}): receipt \"{receipt}\" already imported for this student");
+                        continue;
+                    }
 
                     var mNum = MonthNum(r.Month);
                     var yr = r.Year ?? DateTime.Now.Year;
@@ -1059,7 +1066,15 @@ namespace InstituteWebAPI.Controllers
                     await AddDue(FeeDueType.Admission, Dec(r.AdmissionAmount), 0, null);
                     await AddDue(FeeDueType.Card, Dec(r.CardAmount), 0, null);
 
-                    if (dueIds.Count == 0) { res.Skipped++; continue; }
+                    if (dueIds.Count == 0)
+                    {
+                        res.Skipped++;
+                        var hadAnyAmount = Dec(r.MonthlyFee) > 0 || Dec(r.LateFee) > 0 || Dec(r.AdmissionAmount) > 0 || Dec(r.CardAmount) > 0;
+                        res.SkippedDetails.Add(hadAnyAmount
+                            ? $"Row {i + 2} ({reg}): all fee amounts on this row were already recorded for this admission/month"
+                            : $"Row {i + 2} ({reg}): no fee amount on this row (Monthly/Admission/Card all zero or blank)");
+                        continue;
+                    }
 
                     var total = r.Total ?? dueIds.Sum(x => x.amt);
                     var payment = new Payment
