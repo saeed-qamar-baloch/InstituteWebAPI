@@ -923,14 +923,13 @@ namespace InstituteWebAPI.Controllers
                     }
 
                     var receipt = S(r.ReceiptNo);
-                    // Idempotency: skip if a payment with this receipt already exists for the student
-                    if (receipt.Length > 0 &&
-                        await db.Payments.AnyAsync(p => p.StudentId == student.StudentID && p.Remarks == receipt))
-                    {
-                        res.Skipped++;
-                        res.SkippedDetails.Add($"Row {i + 2} ({reg}): receipt \"{receipt}\" already imported for this student");
-                        continue;
-                    }
+                    // NOTE: do NOT skip rows just because this receipt number was already used.
+                    // One receipt commonly covers several months (or Monthly+Admission+Card)
+                    // paid together — each becomes its own sheet row but they legitimately
+                    // share a receipt number. Idempotency on re-import is instead handled
+                    // per-due below (AddDue skips a (AdmissionId, FeeType, FeeMonth) that was
+                    // already recorded), which correctly distinguishes "already imported this
+                    // exact month" from "same receipt, different month."
 
                     var mNum = MonthNum(r.Month);
                     var yr = r.Year ?? DateTime.Now.Year;
