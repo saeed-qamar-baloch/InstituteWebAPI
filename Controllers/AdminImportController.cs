@@ -907,7 +907,10 @@ namespace InstituteWebAPI.Controllers
                             AdmittedClassID = null,
                             RegistrationDate = student.RegDate,
                             MonthlyFee = Dec(r.MonthlyFee),
-                            AdmissionFee = Dec(r.AdmissionAmount),
+                            // Blank Admission Amount means it isn't mentioned in the sheet at
+                            // all (not that it's literally 0) — treat that as "already paid"
+                            // at the flat default of 300.
+                            AdmissionFee = r.AdmissionAmount ?? 300m,
                             DueDate = null,
                             Status = "Inactive",
                             IsActive = false,
@@ -938,9 +941,12 @@ namespace InstituteWebAPI.Controllers
 
                     var dueIds = new List<(Guid id, decimal amt)>();
 
-                    async Task AddDue(FeeDueType type, decimal baseAmt, decimal lateAmt, DateTime? fm)
+                    // allowZero: create the due even when both amounts are 0 — used for the
+                    // Monthly type when a Month is named on the row, since "Month given but
+                    // 0/0" means the fee was waived for that month, not "nothing happened."
+                    async Task AddDue(FeeDueType type, decimal baseAmt, decimal lateAmt, DateTime? fm, bool allowZero = false)
                     {
-                        if (baseAmt <= 0 && lateAmt <= 0) return;
+                        if (baseAmt <= 0 && lateAmt <= 0 && !allowZero) return;
                         var dueMonth = type == FeeDueType.Monthly ? fm : null;
 
                         // The unique index on (AdmissionId, FeeType, FeeMonth) means at most one
@@ -953,6 +959,7 @@ namespace InstituteWebAPI.Controllers
                             && d.FeeType == type && d.FeeMonth == dueMonth);
                         if (already) return;
 
+                        var isZero = baseAmt <= 0 && lateAmt <= 0;
                         var due = new FeeDue
                         {
                             FeeDueId = Guid.NewGuid(),
@@ -963,15 +970,26 @@ namespace InstituteWebAPI.Controllers
                             LateFeeAmount = lateAmt,
                             DueDate = fm ?? paidOn,
                             IsLateFeeWaived = false,
-                            Status = FeeDueStatus.Paid,
+                            // A 0/0 row recorded only because the month was named on the sheet
+                            // is a waiver, not a payment — flag it as Waived rather than Paid.
+                            Status = isZero ? FeeDueStatus.Waived : FeeDueStatus.Paid,
                             CreatedAt = DateTime.Now,
                         };
                         db.FeeDues.Add(due);
                         dueIds.Add((due.FeeDueId, baseAmt + lateAmt));
                     }
 
-                    await AddDue(FeeDueType.Monthly, Dec(r.MonthlyFee), Dec(r.LateFee), feeMonth);
-                    await AddDue(FeeDueType.Admission, Dec(r.AdmissionAmount), 0, null);
+                    // Month named on the row but Monthly/Late amounts are both 0 → the fee was
+                    // waived for that month; still record it (allowZero) so the month isn't
+                    // left missing from the student's fee history.
+                    await AddDue(FeeDueType.Monthly, Dec(r.MonthlyFee), Dec(r.LateFee), feeMonth, allowZero: feeMonth != null);
+
+                    // Admission Amount left blank (not even an explicit 0) means the sheet never
+                    // logged it — assume the flat Rs 300 admission fee was already paid. An
+                    // explicit 0 is still respected as "no admission fee charged."
+                    var admissionAmt = r.AdmissionAmount ?? 300m;
+                    await AddDue(FeeDueType.Admission, admissionAmt, 0, null);
+
                     await AddDue(FeeDueType.Card, Dec(r.CardAmount), 0, null);
 
                     if (dueIds.Count == 0)
