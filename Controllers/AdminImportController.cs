@@ -1022,15 +1022,27 @@ namespace InstituteWebAPI.Controllers
 
                     var dueIds = new List<(Guid id, decimal amt)>();
 
-                    void AddDue(FeeDueType type, decimal baseAmt, decimal lateAmt, DateTime? fm)
+                    async Task AddDue(FeeDueType type, decimal baseAmt, decimal lateAmt, DateTime? fm)
                     {
                         if (baseAmt <= 0 && lateAmt <= 0) return;
+                        var dueMonth = type == FeeDueType.Monthly ? fm : null;
+
+                        // The unique index on (AdmissionId, FeeType, FeeMonth) means at most one
+                        // Monthly due per month, and — since FeeMonth is null for Admission/Card —
+                        // at most one Admission due and one Card due, ever, per admission. Sheets
+                        // commonly repeat the admission/card amount on every monthly row, and
+                        // re-running the import re-sends already-recorded months, so check first
+                        // instead of letting SaveChangesAsync throw a duplicate-key error.
+                        var already = await db.FeeDues.AnyAsync(d => d.AdmissionId == admission.AdmissionID
+                            && d.FeeType == type && d.FeeMonth == dueMonth);
+                        if (already) return;
+
                         var due = new FeeDue
                         {
                             FeeDueId = Guid.NewGuid(),
                             AdmissionId = admission.AdmissionID,
                             FeeType = type,
-                            FeeMonth = type == FeeDueType.Monthly ? fm : null,
+                            FeeMonth = dueMonth,
                             BaseAmount = baseAmt,
                             LateFeeAmount = lateAmt,
                             DueDate = fm ?? paidOn,
@@ -1042,9 +1054,9 @@ namespace InstituteWebAPI.Controllers
                         dueIds.Add((due.FeeDueId, baseAmt + lateAmt));
                     }
 
-                    AddDue(FeeDueType.Monthly, Dec(r.MonthlyFee), Dec(r.LateFee), feeMonth);
-                    AddDue(FeeDueType.Admission, Dec(r.AdmissionAmount), 0, null);
-                    AddDue(FeeDueType.Card, Dec(r.CardAmount), 0, null);
+                    await AddDue(FeeDueType.Monthly, Dec(r.MonthlyFee), Dec(r.LateFee), feeMonth);
+                    await AddDue(FeeDueType.Admission, Dec(r.AdmissionAmount), 0, null);
+                    await AddDue(FeeDueType.Card, Dec(r.CardAmount), 0, null);
 
                     if (dueIds.Count == 0) { res.Skipped++; continue; }
 
