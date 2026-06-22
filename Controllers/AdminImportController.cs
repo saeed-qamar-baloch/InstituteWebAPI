@@ -952,6 +952,15 @@ namespace InstituteWebAPI.Controllers
             var res = new ImportResult();
             if (rows == null || rows.Count == 0) return Ok(res);
 
+            // Fallback course for students who have no admission at all yet —
+            // needed so we can auto-create a placeholder Admission for them below.
+            var course = await db.Courses.FirstOrDefaultAsync(c => c.CourseName == "Language");
+            if (course == null)
+            {
+                course = new Courses { CourseID = Guid.NewGuid(), CourseName = "Language", CourseDescription = "Imported", CourseStatus = true };
+                db.Courses.Add(course); await db.SaveChangesAsync();
+            }
+
             for (int i = 0; i < rows.Count; i++)
             {
                 var r = rows[i];
@@ -960,13 +969,45 @@ namespace InstituteWebAPI.Controllers
 
                 try
                 {
+                    // Student not in the Student List sheet at all — nothing to attach a
+                    // payment to, so this row is skipped per business rule.
                     var student = await db.Students.FirstOrDefaultAsync(s => s.RegistrationNo == reg);
                     if (student == null) { res.Errors.Add($"Row {i + 2}: student {reg} not found"); continue; }
 
                     var admission = await db.Admissions.Where(a => a.StudentID == student.StudentID)
                         .OrderByDescending(a => a.IsActive).ThenByDescending(a => a.RegistrationDate)
                         .FirstOrDefaultAsync();
-                    if (admission == null) { res.Errors.Add($"Row {i + 2}: no admission for {reg}"); continue; }
+
+                    if (admission == null)
+                    {
+                        // Student exists but was never given a current admission (e.g. an
+                        // older/inactive student not part of the 2026 cohort). Auto-create a
+                        // placeholder admission so their historical payment can still be
+                        // recorded — AdmissionDate comes from the Student List's RegDate, and
+                        // both the new admission and the student are marked Inactive since
+                        // they aren't part of any active enrolment.
+                        admission = new Admissions
+                        {
+                            AdmissionID = Guid.NewGuid(),
+                            StudentID = student.StudentID,
+                            CourseID = course.CourseID,
+                            AdmittedClassID = null,
+                            RegistrationDate = student.RegDate,
+                            MonthlyFee = Dec(r.MonthlyFee),
+                            AdmissionFee = Dec(r.AdmissionAmount),
+                            DueDate = null,
+                            Status = "Inactive",
+                            IsActive = false,
+                            IsFree = false,
+                            CreatedAt = DateTime.Now,
+                            ModifiedAt = DateTime.Now,
+                        };
+                        db.Admissions.Add(admission);
+
+                        student.IsEnrolled = false;
+
+                        await db.SaveChangesAsync();
+                    }
 
                     var receipt = S(r.ReceiptNo);
                     // Idempotency: skip if a payment with this receipt already exists for the student
