@@ -1067,7 +1067,12 @@ namespace InstituteWebAPI.Controllers
                 }
                 catch (Exception ex)
                 {
-                    res.Errors.Add($"Row {i + 2} ({reg}): {ex.Message}");
+                    // A failed SaveChangesAsync leaves its entities tracked by the context;
+                    // without clearing them here, every subsequent row's save would retry
+                    // (and re-fail on) this same broken entity, cascading one bad row into
+                    // an error for the rest of the sheet. Clear so each row is independent.
+                    db.ChangeTracker.Clear();
+                    res.Errors.Add($"Row {i + 2} ({reg}): {ex.InnerException?.Message ?? ex.Message}");
                 }
             }
             return Ok(res);
