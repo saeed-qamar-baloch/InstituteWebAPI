@@ -338,6 +338,34 @@ namespace InstituteWebAPI.Services.FeeManagement
             return mapper.Map<FeeDueDto>(due);
         }
 
+        public async Task<FeeDueDto?> WaiveAdmissionFeeAsync(Guid feeDueId)
+        {
+            var due = await repository.GetFeeDueAsync(feeDueId);
+            if (due == null)
+            {
+                return null;
+            }
+
+            if (due.FeeType != FeeDueType.Admission)
+            {
+                throw new InvalidOperationException("Only Admission fee dues can be waived with this action.");
+            }
+
+            if (due.Status == FeeDueStatus.Paid)
+            {
+                throw new InvalidOperationException("Cannot waive a due that is already paid.");
+            }
+
+            due.BaseAmount = 0m;
+            due.LateFeeAmount = 0m;
+            due.IsLateFeeWaived = true;
+            due.Status = FeeDueStatus.Waived;
+
+            await repository.SaveChangesAsync();
+
+            return mapper.Map<FeeDueDto>(due);
+        }
+
         public async Task<FeeSettingsDto> GetFeeSettingsAsync()
         {
             var settings = await repository.GetFeeSettingsAsync();

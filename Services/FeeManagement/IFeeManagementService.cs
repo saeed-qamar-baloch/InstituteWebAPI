@@ -9,6 +9,13 @@ namespace InstituteWebAPI.Services.FeeManagement
         Task<IReadOnlyList<FeeDueDto>> GetUnpaidDuesAsync(Guid studentId);
         Task<PaymentDto> CollectFeeAsync(CollectFeeRequestDto request);
         Task<FeeDueDto?> WaiveLateFeeAsync(Guid feeDueId);
+
+        /// <summary>
+        /// Fully waives an Admission fee due: zeroes the base and late fee amounts
+        /// and marks the due as Waived. Throws if the due is already paid or is
+        /// not an Admission-type due.
+        /// </summary>
+        Task<FeeDueDto?> WaiveAdmissionFeeAsync(Guid feeDueId);
         Task<IReadOnlyList<StudentLookupDto>> SearchStudentsAsync(string? searchTerm);
         Task<IReadOnlyList<PaymentSummaryDto>> GetPaymentsAsync(string? searchTerm, DateTime? fromDate, DateTime? toDate, PaymentMethod? paymentMethod);
         Task<FeeDueDto> GenerateCardFeeAsync(Guid studentId);

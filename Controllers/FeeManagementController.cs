@@ -96,6 +96,21 @@ namespace InstituteWebAPI.Controllers
             }
         }
 
+        [HttpPatch("fee-dues/{feeDueId:guid}/waive-admission-fee")]
+        public async Task<IActionResult> WaiveAdmissionFee(Guid feeDueId)
+        {
+            try
+            {
+                var due = await service.WaiveAdmissionFeeAsync(feeDueId);
+                if (due == null) return NotFound();
+                return Ok(due);
+            }
+            catch (InvalidOperationException ex)
+            {
+                return BadRequest(ex.Message);
+            }
+        }
+
         [HttpPost("students/{studentId:guid}/generate-card-fee")]
         public async Task<IActionResult> GenerateCardFee(Guid studentId)
         {
