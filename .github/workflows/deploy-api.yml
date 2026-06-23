@@ -46,6 +46,12 @@ jobs:
 
           mkdir -p /var/www/rozhn-api
 
+          # Persistent image storage lives OUTSIDE the deploy folder so it
+          # survives the rm -rf below. Images:RootPath in appsettings.Production.json
+          # points here. Safe/idempotent to run on every deploy.
+          mkdir -p /var/lib/rozhn/images/Students /var/lib/rozhn/images/Teachers /var/lib/rozhn/images/Institute /var/lib/rozhn/images/Website
+          chown -R www-data:www-data /var/lib/rozhn/images
+
           systemctl stop rozhn-api || true
 
           rm -rf /var/www/rozhn-api/*
