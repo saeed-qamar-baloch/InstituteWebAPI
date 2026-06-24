@@ -19,6 +19,7 @@ using InstituteWebAPI.Services.FeeManagement;
 using InstituteWebAPI.Models.Configuration;
 using InstituteWebAPI.BackgroundJobs;
 using InstituteWebAPI.Services.Storage;
+using InstituteWebAPI.Services.Sms;
 using Microsoft.AspNetCore.Diagnostics;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -126,6 +127,8 @@ builder.Services.AddDbContext<RozhnInstituteDbContext>(options =>
 builder.Services.AddDbContext<RozhnInstituteAuthDbContext>(options => options.UseSqlServer(builder.Configuration.GetConnectionString("RozhnWebAuthConnectionString")));
 
 builder.Services.Configure<FeeManagementOptions>(builder.Configuration.GetSection("FeeManagement"));
+builder.Services.Configure<InstituteWebAPI.Models.Configuration.SmsGatewaySettings>(builder.Configuration.GetSection("SmsGateway"));
+builder.Services.AddHttpClient<ISmsService, HttpSmsService>();
 
 builder.Services.AddScoped<ITermRepository, TermRepository>();
 builder.Services.AddScoped<ITermMonthsRepository, TermMonthsRepository>();

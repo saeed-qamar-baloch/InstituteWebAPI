@@ -1,4 +1,5 @@
 using InstituteWebAPI.Data;
+using InstituteWebAPI.Services.Sms;
 using InstituteWebApp.Models.Domain;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -13,10 +14,12 @@ namespace InstituteWebAPI.Controllers
     public class NotificationsController : ControllerBase
     {
         private readonly RozhnInstituteDbContext dbContext;
+        private readonly ISmsService smsService;
 
-        public NotificationsController(RozhnInstituteDbContext dbContext)
+        public NotificationsController(RozhnInstituteDbContext dbContext, ISmsService smsService)
         {
             this.dbContext = dbContext;
+            this.smsService = smsService;
         }
 
         // ── DTOs ─────────────────────────────────────────────────────────────
@@ -317,18 +320,162 @@ namespace InstituteWebAPI.Controllers
 
         /// <summary>
         /// Dispatch logic per channel. InApp is a no-op (record in DB is the
-        /// notification). SMS / Email are stubbed — replace with your provider
-        /// (e.g. Twilio, SendGrid) when ready.
+        /// notification). SMS is wired to ISmsService (local Pakistani gateway —
+        /// see SmsGatewaySettings). Email is still stubbed — wire up a provider
+        /// (e.g. SendGrid) when ready.
         /// </summary>
-        private static Task DispatchAsync(Notification notification)
+        private async Task DispatchAsync(Notification notification)
         {
-            return notification.Channel switch
+            switch (notification.Channel)
             {
-                NotificationChannel.InApp  => Task.CompletedTask,   // stored in DB — UI polls/reads
-                NotificationChannel.SMS    => Task.CompletedTask,   // TODO: integrate SMS provider
-                NotificationChannel.Email  => Task.CompletedTask,   // TODO: integrate email provider
-                _                          => Task.CompletedTask
-            };
+                case NotificationChannel.InApp:
+                    return; // stored in DB — UI polls/reads
+
+                case NotificationChannel.SMS:
+                    var phone = await ResolveRecipientPhoneAsync(notification.RecipientType, notification.RecipientID);
+                    await smsService.SendAsync(phone ?? string.Empty, notification.Message);
+                    return;
+
+                case NotificationChannel.Email:
+                    return; // TODO: integrate email provider
+
+                default:
+                    return;
+            }
+        }
+
+        /// <summary>Looks up the registered contact number for a notification recipient.
+        /// Students: FatherContact first, falls back to StudentContact.
+        /// Teachers: Contact.</summary>
+        private async Task<string?> ResolveRecipientPhoneAsync(NotificationRecipientType recipientType, Guid? recipientId)
+        {
+            if (recipientId == null) return null;
+
+            if (recipientType == NotificationRecipientType.Student)
+            {
+                var student = await dbContext.Students
+                    .AsNoTracking()
+                    .FirstOrDefaultAsync(s => s.StudentID == recipientId.Value);
+
+                if (student == null) return null;
+                return !string.IsNullOrWhiteSpace(student.FatherContact) ? student.FatherContact : student.StudentContact;
+            }
+
+            if (recipientType == NotificationRecipientType.Teacher)
+            {
+                var teacher = await dbContext.Teachers
+                    .AsNoTracking()
+                    .FirstOrDefaultAsync(t => t.TeacherID == recipientId.Value);
+
+                return teacher?.Contact;
+            }
+
+            return null;
+        }
+
+        // ── POST api/Notifications/sms/fee-reminders ─────────────────────────
+        // Sends a fee-due reminder SMS to selected students (e.g. from the Fee
+        // List page). One Notification row is created per student (so it shows
+        // up in normal notification history/audit), then dispatched immediately.
+        [HttpPost("sms/fee-reminders")]
+        public async Task<IActionResult> SendFeeReminderSms([FromBody] SendFeeReminderSmsDto dto)
+        {
+            if (dto.StudentIDs == null || dto.StudentIDs.Count == 0)
+                return BadRequest("No students selected.");
+
+            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            var now = DateTime.UtcNow;
+
+            var students = await dbContext.Students
+                .AsNoTracking()
+                .Where(s => dto.StudentIDs.Contains(s.StudentID))
+                .ToListAsync();
+
+            var notifications = new List<Notification>();
+            var skippedNoPhone = new List<string>();
+
+            foreach (var s in students)
+            {
+                var phone = !string.IsNullOrWhiteSpace(s.FatherContact) ? s.FatherContact : s.StudentContact;
+                if (string.IsNullOrWhiteSpace(phone))
+                {
+                    skippedNoPhone.Add(s.StudentName);
+                    continue;
+                }
+
+                var message = string.IsNullOrWhiteSpace(dto.MessageTemplate)
+                    ? $"Dear Parent, fee dues for {s.StudentName} are outstanding. Please clear payment at your earliest convenience. - Rozhn Institute"
+                    : dto.MessageTemplate.Replace("{StudentName}", s.StudentName);
+
+                notifications.Add(new Notification
+                {
+                    NotificationID   = Guid.NewGuid(),
+                    NotificationType = NotificationType.FeeReminder,
+                    RecipientType    = NotificationRecipientType.Student,
+                    RecipientID      = s.StudentID,
+                    Channel          = NotificationChannel.SMS,
+                    Title            = "Fee Reminder",
+                    Message          = message,
+                    Status           = NotificationStatus.Pending,
+                    CreatedByUserID  = userId,
+                    CreatedAt        = now
+                });
+            }
+
+            if (notifications.Count == 0)
+            {
+                return Ok(new
+                {
+                    Message = "No valid phone numbers found for selected students.",
+                    Sent = 0,
+                    Failed = 0,
+                    SkippedNoPhone = skippedNoPhone
+                });
+            }
+
+            dbContext.Notifications.AddRange(notifications);
+            await dbContext.SaveChangesAsync();
+
+            int sent = 0, failed = 0;
+            var failures = new List<object>();
+
+            foreach (var n in notifications)
+            {
+                try
+                {
+                    await DispatchAsync(n);
+                    n.Status = NotificationStatus.Sent;
+                    n.SentAt = DateTime.UtcNow;
+                    n.ErrorMessage = null;
+                    sent++;
+                }
+                catch (Exception ex)
+                {
+                    n.Status = NotificationStatus.Failed;
+                    n.ErrorMessage = ex.Message;
+                    failed++;
+                    failures.Add(new { n.RecipientID, ex.Message });
+                }
+            }
+
+            await dbContext.SaveChangesAsync();
+
+            return Ok(new
+            {
+                TotalRecipients = notifications.Count,
+                Sent = sent,
+                Failed = failed,
+                SkippedNoPhone = skippedNoPhone,
+                Failures = failures
+            });
+        }
+
+        public class SendFeeReminderSmsDto
+        {
+            public List<Guid> StudentIDs { get; set; } = new();
+            /// <summary>Optional override. Use {StudentName} as a placeholder.
+            /// Falls back to a default fee-reminder message when omitted.</summary>
+            public string? MessageTemplate { get; set; }
         }
     }
 }
