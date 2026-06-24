@@ -34,6 +34,9 @@ namespace InstituteWebApp.Models.Domain
         public DateTime ModifiedAt { get; set; }
         public bool IsEnrolled { get; set; }
         public string? Remarks { get; set; }
+        // Freeform status flag — null/empty for normal students; "Graduated" once the
+        // student has completed the course and been removed from any current class.
+        public string? Status { get; set; }
         [NotMapped]
         public IFormFile file { get; set; }
 

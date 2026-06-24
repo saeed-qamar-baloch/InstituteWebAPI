@@ -1,5 +1,6 @@
 using InstituteWebAPI.Data;
 using InstituteWebAPI.Services.Storage;
+using InstituteWebAPI.Services.TermContext;
 using InstituteWebApp.Models.Domain;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -16,10 +17,11 @@ namespace InstituteWebAPI.Controllers
         private readonly RozhnInstituteDbContext db;
         private readonly ImageStorage imageStorage;
         private readonly IHttpContextAccessor http;
+        private readonly ITermContext termContext;
 
-        public AdminImportController(RozhnInstituteDbContext db, ImageStorage imageStorage, IHttpContextAccessor http)
+        public AdminImportController(RozhnInstituteDbContext db, ImageStorage imageStorage, IHttpContextAccessor http, ITermContext termContext)
         {
-            this.db = db; this.imageStorage = imageStorage; this.http = http;
+            this.db = db; this.imageStorage = imageStorage; this.http = http; this.termContext = termContext;
         }
 
         // ── helpers ───────────────────────────────────────────────────────────
@@ -450,6 +452,201 @@ namespace InstituteWebAPI.Controllers
                 catch (Exception ex)
                 {
                     res.Errors.Add($"Row {i + 2} ({reg}): {ex.Message}");
+                }
+            }
+
+            return Ok(res);
+        }
+
+        // ════════ CLASS ASSIGNMENTS (Class/Slot/Section/Teacher → active term) ════════
+        // Assigns existing students (by Reg No.) to a Class+Slot+Section+Teacher
+        // combination in the active term. The Class column can also be:
+        //   "Not Assigned" — student is removed from any current class.
+        //   "Graduated"    — removed from any current class, Student.Status = "Graduated",
+        //                    the student's active Admission is marked Completed/inactive.
+        // A student already actively enrolled elsewhere in the active term is moved.
+        // A missing Class+Slot+Section+Teacher combination is auto-created (subject to
+        // the same teacher/slot conflict rule enforced elsewhere in the app).
+        public class ClassAssignmentRow
+        {
+            public string? RegNo { get; set; }
+            public string? Name { get; set; }
+            public string? FatherName { get; set; }
+            public string? Teacher { get; set; }
+            public string? TeacherId { get; set; }
+            public string? Slot { get; set; }
+            public string? Section { get; set; }
+            public string? ClassName { get; set; }
+        }
+
+        [HttpPost("class-assignments")]
+        public async Task<IActionResult> ImportClassAssignments([FromBody] List<ClassAssignmentRow> rows)
+        {
+            var res = new ImportResult();
+            if (rows == null || rows.Count == 0) return Ok(res);
+
+            Term activeTerm;
+            try
+            {
+                activeTerm = await termContext.GetActiveTermAsync();
+            }
+            catch (InvalidOperationException ex)
+            {
+                res.Errors.Add(ex.Message);
+                return Ok(res);
+            }
+
+            var classes        = await db.Classes.ToListAsync();
+            var slots           = await db.Slots.Where(s => s.TermID == activeTerm.TermID).ToListAsync();
+            var sections        = await db.Sections.Where(s => s.TermID == activeTerm.TermID).ToListAsync();
+            var teachers        = await db.Teachers.ToListAsync();
+            var currentClasses  = await db.CurrentClasses.Where(cc => cc.TermID == activeTerm.TermID).ToListAsync();
+
+            for (int i = 0; i < rows.Count; i++)
+            {
+                var r = rows[i];
+                var reg = S(r.RegNo);
+                if (reg.Length == 0) { res.Errors.Add($"Row {i + 2}: missing Reg No."); continue; }
+
+                try
+                {
+                    var student = await db.Students.FirstOrDefaultAsync(s => s.RegistrationNo == reg);
+                    if (student == null) { res.Errors.Add($"Row {i + 2} ({reg}): student not found — import the Student List first."); continue; }
+
+                    var className = S(r.ClassName);
+
+                    // Existing active-term enrolment for this student, if any.
+                    var existingEnroll = await db.ClassStudents
+                        .Include(e => e.CurrentClass)
+                        .FirstOrDefaultAsync(e => e.StudentID == student.StudentID && e.CurrentClass.TermID == activeTerm.TermID);
+
+                    // ── "Not Assigned" — drop from any current class, nothing else changes ──
+                    if (className.Length == 0 || className.Equals("Not Assigned", StringComparison.OrdinalIgnoreCase))
+                    {
+                        if (existingEnroll != null)
+                        {
+                            db.ClassStudents.Remove(existingEnroll);
+                            await db.SaveChangesAsync();
+                        }
+                        res.Updated++;
+                        continue;
+                    }
+
+                    // ── "Graduated" — drop from class, mark student Graduated, admission Completed ──
+                    if (className.Equals("Graduated", StringComparison.OrdinalIgnoreCase))
+                    {
+                        if (existingEnroll != null)
+                            db.ClassStudents.Remove(existingEnroll);
+
+                        var admission = await db.Admissions
+                            .Where(a => a.StudentID == student.StudentID && a.IsActive)
+                            .OrderByDescending(a => a.RegistrationDate)
+                            .FirstOrDefaultAsync();
+                        if (admission == null)
+                        {
+                            res.Errors.Add($"Row {i + 2} ({reg}): no active admission found to mark Completed.");
+                            continue;
+                        }
+
+                        admission.Status = "Completed";
+                        admission.IsActive = false;
+                        admission.LeavingDate = DateTime.Now;
+                        admission.ModifiedAt = DateTime.Now;
+
+                        student.Status = "Graduated";
+                        student.IsEnrolled = false;
+                        student.ModifiedAt = DateTime.Now;
+
+                        await db.SaveChangesAsync();
+                        res.Updated++;
+                        continue;
+                    }
+
+                    // ── Real class name — needs Teacher, Slot and Section ──
+                    var teacherIdRaw = S(r.TeacherId);
+                    if (teacherIdRaw.Length == 0) { res.Errors.Add($"Row {i + 2} ({reg}): missing TeacherID"); continue; }
+                    if (!Guid.TryParse(teacherIdRaw, out var teacherGuid)) { res.Errors.Add($"Row {i + 2} ({reg}): TeacherID '{teacherIdRaw}' is not a valid ID"); continue; }
+                    var teacher = teachers.FirstOrDefault(t => t.TeacherID == teacherGuid);
+                    if (teacher == null) { res.Errors.Add($"Row {i + 2} ({reg}): teacher with ID '{teacherIdRaw}' not found"); continue; }
+
+                    var cls = classes.FirstOrDefault(c => c.ClassName.Equals(className, StringComparison.OrdinalIgnoreCase));
+                    if (cls == null) { res.Errors.Add($"Row {i + 2} ({reg}): class '{className}' not found"); continue; }
+
+                    var slotName = S(r.Slot);
+                    if (slotName.Length == 0) { res.Errors.Add($"Row {i + 2} ({reg}): missing Slot"); continue; }
+                    var slot = slots.FirstOrDefault(s => s.SlotName.Equals(slotName, StringComparison.OrdinalIgnoreCase));
+                    if (slot == null) { res.Errors.Add($"Row {i + 2} ({reg}): slot '{slotName}' not found in the active term"); continue; }
+
+                    var sectionName = S(r.Section);
+                    if (sectionName.Length == 0) { res.Errors.Add($"Row {i + 2} ({reg}): missing Section"); continue; }
+                    var section = sections.FirstOrDefault(s => s.Name.Equals(sectionName, StringComparison.OrdinalIgnoreCase));
+                    if (section == null) { res.Errors.Add($"Row {i + 2} ({reg}): section '{sectionName}' not found in the active term"); continue; }
+
+                    // Find or auto-create the matching CurrentClass for this exact combination.
+                    var cc = currentClasses.FirstOrDefault(x =>
+                        x.ClassID == cls.ClassID && x.SlotID == slot.SlotID &&
+                        x.SectionID == section.SectionID && x.TeacherID == teacher.TeacherID);
+
+                    if (cc == null)
+                    {
+                        // Same rule as CurrentClassRepository.CheckTeacherSlotConflictAsync: a
+                        // teacher cannot have a second CurrentClass row in the same slot+term,
+                        // even for the same class under a different section.
+                        var conflict = currentClasses.FirstOrDefault(x => x.TeacherID == teacher.TeacherID && x.SlotID == slot.SlotID);
+                        if (conflict != null)
+                        {
+                            var conflictClassName = classes.FirstOrDefault(c => c.ClassID == conflict.ClassID)?.ClassName ?? "another class";
+                            res.Errors.Add($"Row {i + 2} ({reg}): teacher '{teacher.TeacherName}' is already assigned to '{conflictClassName}' in slot '{slotName}' — cannot auto-create a conflicting class.");
+                            continue;
+                        }
+
+                        cc = new CurrentClass
+                        {
+                            CurrentClassID = Guid.NewGuid(),
+                            ClassID = cls.ClassID,
+                            SlotID = slot.SlotID,
+                            SectionID = section.SectionID,
+                            TeacherID = teacher.TeacherID,
+                            TermID = activeTerm.TermID,
+                            IsActive = true,
+                            CreatedOn = DateTime.Now,
+                        };
+                        db.CurrentClasses.Add(cc);
+                        currentClasses.Add(cc);
+                        await db.SaveChangesAsync();
+                    }
+
+                    if (existingEnroll != null && existingEnroll.CurrentClassID == cc.CurrentClassID)
+                    {
+                        // Already correctly placed.
+                        res.Skipped++;
+                        continue;
+                    }
+
+                    if (existingEnroll != null)
+                        db.ClassStudents.Remove(existingEnroll);   // move them out of the old class
+
+                    db.ClassStudents.Add(new ClassStudents
+                    {
+                        ClassStudentID = Guid.NewGuid(),
+                        CurrentClassID = cc.CurrentClassID,
+                        StudentID = student.StudentID,
+                        Status = "Enrolled",
+                    });
+
+                    // Being actively assigned again implicitly un-graduates the student.
+                    if (string.Equals(student.Status, "Graduated", StringComparison.OrdinalIgnoreCase))
+                        student.Status = null;
+                    student.IsEnrolled = true;
+                    student.ModifiedAt = DateTime.Now;
+
+                    await db.SaveChangesAsync();
+                    res.Created++;
+                }
+                catch (Exception ex)
+                {
+                    db.ChangeTracker.Clear();
+                    res.Errors.Add($"Row {i + 2} ({reg}): {ex.InnerException?.Message ?? ex.Message}");
                 }
             }
 

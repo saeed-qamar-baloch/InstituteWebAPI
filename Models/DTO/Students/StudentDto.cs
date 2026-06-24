@@ -23,6 +23,7 @@ namespace InstituteWebAPI.Models.DTO.Students
         public string? FatherCnic { get; set; }
         public string? Picture { get; set; }
         public bool IsEnrolled { get; set; }
+        public string? Status { get; set; }
         public string Remarks { get; set; }
 
         public VillageDto Village { get; set; }

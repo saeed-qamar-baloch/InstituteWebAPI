@@ -36,6 +36,7 @@ namespace InstituteWebAPI.Models.DTO.Students
         public string? Remarks { get; set; }
 
         public bool IsEnrolled { get; set; }
+        public string? Status { get; set; }
        public Guid VillageID { get; set; }
         public IFormFile? file { get; set; }
     }
