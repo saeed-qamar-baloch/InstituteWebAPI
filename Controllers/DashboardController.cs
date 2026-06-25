@@ -148,6 +148,7 @@ namespace InstituteWebAPI.Controllers
                 .Select(p => new
                 {
                     p.PaymentId,
+                    p.Student.StudentID,
                     p.Student.StudentName,
                     p.Student.RegistrationNo,
                     p.TotalAmount,
