@@ -565,8 +565,9 @@ namespace InstituteWebAPI.Controllers
                     // ── Real class name — needs Teacher, Slot and Section ──
                     var teacherIdRaw = S(r.TeacherId);
                     if (teacherIdRaw.Length == 0) { res.Errors.Add($"Row {i + 2} ({reg}): missing TeacherID"); continue; }
-                    if (!Guid.TryParse(teacherIdRaw, out var teacherGuid)) { res.Errors.Add($"Row {i + 2} ({reg}): TeacherID '{teacherIdRaw}' is not a valid ID"); continue; }
-                    var teacher = teachers.FirstOrDefault(t => t.TeacherID == teacherGuid);
+                    // TeacherID in the sheet is the teacher's Registration No. (e.g. "RZST-Jan20-012"),
+                    // the same human-readable code shown in the Teacher List — not the internal Guid PK.
+                    var teacher = teachers.FirstOrDefault(t => string.Equals(t.RegistrationNo, teacherIdRaw, StringComparison.OrdinalIgnoreCase));
                     if (teacher == null) { res.Errors.Add($"Row {i + 2} ({reg}): teacher with ID '{teacherIdRaw}' not found"); continue; }
 
                     var cls = classes.FirstOrDefault(c => c.ClassName.Equals(className, StringComparison.OrdinalIgnoreCase));
