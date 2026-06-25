@@ -1,8 +1,10 @@
 using InstituteWebAPI.Data;
+using InstituteWebAPI.Repositories.IRepository;
 using InstituteWebAPI.Services.Storage;
 using InstituteWebAPI.Services.TermContext;
 using InstituteWebApp.Models.Domain;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using System.Globalization;
@@ -18,10 +20,14 @@ namespace InstituteWebAPI.Controllers
         private readonly ImageStorage imageStorage;
         private readonly IHttpContextAccessor http;
         private readonly ITermContext termContext;
+        private readonly UserManager<IdentityUser> userManager;
+        private readonly ITeacherIdentityLinkRepository teacherIdentityLinkRepository;
 
-        public AdminImportController(RozhnInstituteDbContext db, ImageStorage imageStorage, IHttpContextAccessor http, ITermContext termContext)
+        public AdminImportController(RozhnInstituteDbContext db, ImageStorage imageStorage, IHttpContextAccessor http, ITermContext termContext,
+            UserManager<IdentityUser> userManager, ITeacherIdentityLinkRepository teacherIdentityLinkRepository)
         {
             this.db = db; this.imageStorage = imageStorage; this.http = http; this.termContext = termContext;
+            this.userManager = userManager; this.teacherIdentityLinkRepository = teacherIdentityLinkRepository;
         }
 
         // ── helpers ───────────────────────────────────────────────────────────
@@ -1321,6 +1327,81 @@ namespace InstituteWebAPI.Controllers
                     res.Created++;
                 }
                 catch (Exception ex) { res.Errors.Add($"Row {i + 2} ({regNo}): {ex.Message}"); }
+            }
+            return Ok(res);
+        }
+
+        // ════════ TEACHER ACCOUNTS (bulk-create logins from Email/Password/ID) ════════
+        // ID column = Teacher RegistrationNo (e.g. "RZST-Jan20-012"), the same code
+        // shown in the Teacher List. Mirrors AuthController.RegisterTeacher exactly
+        // (same IdentityUser creation, "Teacher" role, IdentityUserId link) so bulk
+        // and one-at-a-time account creation behave identically.
+        public class TeacherAccountRow
+        {
+            public string? RegNo { get; set; }
+            public string? Email { get; set; }
+            public string? Password { get; set; }
+        }
+
+        [HttpPost("teacher-accounts")]
+        public async Task<IActionResult> ImportTeacherAccounts([FromBody] List<TeacherAccountRow> rows)
+        {
+            var res = new ImportResult();
+            if (rows == null || rows.Count == 0) return Ok(res);
+
+            for (int i = 0; i < rows.Count; i++)
+            {
+                var r = rows[i];
+                var regNo = S(r.RegNo);
+                if (regNo.Length == 0) { res.Errors.Add($"Row {i + 2}: missing ID (Teacher RegNo)"); continue; }
+                var email = S(r.Email);
+                if (email.Length == 0) { res.Errors.Add($"Row {i + 2} ({regNo}): missing Email"); continue; }
+                var password = S(r.Password);
+                if (password.Length == 0) { res.Errors.Add($"Row {i + 2} ({regNo}): missing Password"); continue; }
+
+                try
+                {
+                    var teacher = await db.Teachers.FirstOrDefaultAsync(t => t.RegistrationNo == regNo);
+                    if (teacher == null) { res.Errors.Add($"Row {i + 2} ({regNo}): teacher not found — import the Teacher List first."); continue; }
+
+                    if (!string.IsNullOrWhiteSpace(teacher.IdentityUserId))
+                    {
+                        res.Skipped++;
+                        res.SkippedDetails.Add($"Row {i + 2} ({regNo}): already has a login account.");
+                        continue;
+                    }
+
+                    var existingUser = await userManager.FindByEmailAsync(email);
+                    if (existingUser != null)
+                    {
+                        res.Errors.Add($"Row {i + 2} ({regNo}): a user with email '{email}' already exists.");
+                        continue;
+                    }
+
+                    var identityUser = new IdentityUser { UserName = email, Email = email };
+                    var createResult = await userManager.CreateAsync(identityUser, password);
+                    if (!createResult.Succeeded)
+                    {
+                        res.Errors.Add($"Row {i + 2} ({regNo}): {string.Join(", ", createResult.Errors.Select(e => e.Description))}");
+                        continue;
+                    }
+
+                    var roleResult = await userManager.AddToRoleAsync(identityUser, "Teacher");
+                    if (!roleResult.Succeeded)
+                    {
+                        res.Errors.Add($"Row {i + 2} ({regNo}): account created but failed to assign Teacher role.");
+                        continue;
+                    }
+
+                    // Link teacher with identity user id for authorization scoping — same
+                    // call AuthController.RegisterTeacher makes for a single teacher.
+                    await teacherIdentityLinkRepository.LinkTeacherToUserIdAsync(teacher.TeacherID, identityUser.Id);
+                    res.Created++;
+                }
+                catch (Exception ex)
+                {
+                    res.Errors.Add($"Row {i + 2} ({regNo}): {ex.InnerException?.Message ?? ex.Message}");
+                }
             }
             return Ok(res);
         }
