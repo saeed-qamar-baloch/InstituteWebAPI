@@ -830,6 +830,54 @@ namespace InstituteWebAPI.Migrations
                     b.ToTable("MarkEditRequests");
                 });
 
+            modelBuilder.Entity("InstituteWebApp.Models.Domain.MaterialRequest", b =>
+                {
+                    b.Property<Guid>("MaterialRequestID")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("AdminNote")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<DateTime>("CreatedOn")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("Description")
+                        .HasMaxLength(1000)
+                        .HasColumnType("nvarchar(1000)");
+
+                    b.Property<DateTime?>("FulfilledOn")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("MaterialName")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.Property<int>("Quantity")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime>("RequestDate")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime?>("ReviewedOn")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<Guid>("TeacherID")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.HasKey("MaterialRequestID");
+
+                    b.HasIndex("TeacherID");
+
+                    b.ToTable("MaterialRequests");
+                });
+
             modelBuilder.Entity("InstituteWebApp.Models.Domain.Notification", b =>
                 {
                     b.Property<Guid>("NotificationID")
@@ -2192,6 +2240,17 @@ namespace InstituteWebAPI.Migrations
                         .IsRequired();
 
                     b.Navigation("StudentMark");
+
+                    b.Navigation("Teacher");
+                });
+
+            modelBuilder.Entity("InstituteWebApp.Models.Domain.MaterialRequest", b =>
+                {
+                    b.HasOne("InstituteWebApp.Models.Domain.Teachers", "Teacher")
+                        .WithMany()
+                        .HasForeignKey("TeacherID")
+                        .OnDelete(DeleteBehavior.NoAction)
+                        .IsRequired();
 
                     b.Navigation("Teacher");
                 });

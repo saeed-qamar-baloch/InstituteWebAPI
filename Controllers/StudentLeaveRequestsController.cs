@@ -83,7 +83,7 @@ namespace InstituteWebAPI.Controllers
                 .AnyAsync(r => r.StudentID == dto.StudentID
                             && r.CurrentClassID == dto.CurrentClassID
                             && r.Status == LeaveRequestStatus.Pending);
-            if (duplicate) return BadRequest("A pending leave request already exists for this student.");
+            if (duplicate) return BadRequest("A pending dropout report already exists for this student.");
 
             // Resolve AdmissionID — use supplied value or auto-find the student's active admission
             var admissionId = dto.AdmissionID ?? await db.Admissions
@@ -121,8 +121,8 @@ namespace InstituteWebAPI.Controllers
             await notifications.NotifyRoleAsync(
                 "Admin",
                 AppNotificationType.LeaveRequest,
-                "New leave request",
-                $"{entity.RequestedByTeacher?.TeacherName ?? "A teacher"} requested leave for {entity.Student?.StudentName ?? "a student"}.",
+                "New dropout report",
+                $"{entity.RequestedByTeacher?.TeacherName ?? "A teacher"} reported that {entity.Student?.StudentName ?? "a student"} has dropped out.",
                 "/leave-requests");
 
             return Ok(MapToDto(entity));

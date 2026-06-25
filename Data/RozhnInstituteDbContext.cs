@@ -61,6 +61,7 @@ namespace InstituteWebAPI.Data
         public DbSet<ExpenseCategory> ExpenseCategories { get; set; }
         public DbSet<Expense> Expenses { get; set; }
         public DbSet<CardRequest> CardRequests { get; set; }
+        public DbSet<MaterialRequest> MaterialRequests { get; set; }
         public DbSet<TimetableEntry> TimetableEntries { get; set; }
         public DbSet<InstituteSetting> InstituteSettings { get; set; }
         public DbSet<AuditLog> AuditLogs { get; set; }
@@ -150,6 +151,13 @@ namespace InstituteWebAPI.Data
                 .HasOne(c => c.RequestedByTeacher)
                 .WithMany()
                 .HasForeignKey(c => c.RequestedByTeacherID)
+                .OnDelete(DeleteBehavior.NoAction);
+
+            // MaterialRequest: FK to the requesting teacher — no cascade delete
+            modelBuilder.Entity<MaterialRequest>()
+                .HasOne(m => m.Teacher)
+                .WithMany()
+                .HasForeignKey(m => m.TeacherID)
                 .OnDelete(DeleteBehavior.NoAction);
 
             // MarkEditRequest: no cascade on StudentMark delete

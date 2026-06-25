@@ -7,7 +7,8 @@ namespace InstituteWebApp.Models.Domain
         General = 0,
         LeaveRequest = 1,
         CardRequest = 2,
-        MarkEditRequest = 3
+        MarkEditRequest = 3,
+        MaterialRequest = 4
     }
 
     /// <summary>
