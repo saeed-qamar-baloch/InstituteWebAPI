@@ -562,52 +562,66 @@ namespace InstituteWebAPI.Controllers
                         continue;
                     }
 
-                    // ── Real class name — needs Teacher, Slot and Section ──
+                    // ── Real class name — Teacher may be a real teacher, or "Not Assigned" ──
                     var teacherIdRaw = S(r.TeacherId);
                     if (teacherIdRaw.Length == 0) { res.Errors.Add($"Row {i + 2} ({reg}): missing TeacherID"); continue; }
-                    // TeacherID in the sheet is the teacher's Registration No. (e.g. "RZST-Jan20-012"),
-                    // the same human-readable code shown in the Teacher List — not the internal Guid PK.
-                    var teacher = teachers.FirstOrDefault(t => string.Equals(t.RegistrationNo, teacherIdRaw, StringComparison.OrdinalIgnoreCase));
-                    if (teacher == null) { res.Errors.Add($"Row {i + 2} ({reg}): teacher with ID '{teacherIdRaw}' not found"); continue; }
 
                     var cls = classes.FirstOrDefault(c => c.ClassName.Equals(className, StringComparison.OrdinalIgnoreCase));
                     if (cls == null) { res.Errors.Add($"Row {i + 2} ({reg}): class '{className}' not found"); continue; }
 
-                    var slotName = S(r.Slot);
-                    if (slotName.Length == 0) { res.Errors.Add($"Row {i + 2} ({reg}): missing Slot"); continue; }
-                    var slot = slots.FirstOrDefault(s => s.SlotName.Equals(slotName, StringComparison.OrdinalIgnoreCase));
-                    if (slot == null) { res.Errors.Add($"Row {i + 2} ({reg}): slot '{slotName}' not found in the active term"); continue; }
+                    var noTeacher = teacherIdRaw.Equals("Not Assigned", StringComparison.OrdinalIgnoreCase);
+                    Teachers? teacher = null;
+                    Slots? slot = null;
+                    Section? section = null;
 
-                    var sectionName = S(r.Section);
-                    if (sectionName.Length == 0) { res.Errors.Add($"Row {i + 2} ({reg}): missing Section"); continue; }
-                    var section = sections.FirstOrDefault(s => s.Name.Equals(sectionName, StringComparison.OrdinalIgnoreCase));
-                    if (section == null) { res.Errors.Add($"Row {i + 2} ({reg}): section '{sectionName}' not found in the active term"); continue; }
+                    if (!noTeacher)
+                    {
+                        // TeacherID in the sheet is the teacher's Registration No. (e.g. "RZST-Jan20-012"),
+                        // the same human-readable code shown in the Teacher List — not the internal Guid PK.
+                        teacher = teachers.FirstOrDefault(t => string.Equals(t.RegistrationNo, teacherIdRaw, StringComparison.OrdinalIgnoreCase));
+                        if (teacher == null) { res.Errors.Add($"Row {i + 2} ({reg}): teacher with ID '{teacherIdRaw}' not found"); continue; }
+
+                        var slotName = S(r.Slot);
+                        if (slotName.Length == 0) { res.Errors.Add($"Row {i + 2} ({reg}): missing Slot"); continue; }
+                        slot = slots.FirstOrDefault(s => s.SlotName.Equals(slotName, StringComparison.OrdinalIgnoreCase));
+                        if (slot == null) { res.Errors.Add($"Row {i + 2} ({reg}): slot '{slotName}' not found in the active term"); continue; }
+
+                        var sectionName = S(r.Section);
+                        if (sectionName.Length == 0) { res.Errors.Add($"Row {i + 2} ({reg}): missing Section"); continue; }
+                        section = sections.FirstOrDefault(s => s.Name.Equals(sectionName, StringComparison.OrdinalIgnoreCase));
+                        if (section == null) { res.Errors.Add($"Row {i + 2} ({reg}): section '{sectionName}' not found in the active term"); continue; }
+                    }
+                    // else: "Not Assigned" — Slot/Section columns are ignored; the class is
+                    // created (or matched) with no Teacher, Slot, or Section.
 
                     // Find or auto-create the matching CurrentClass for this exact combination.
                     var cc = currentClasses.FirstOrDefault(x =>
-                        x.ClassID == cls.ClassID && x.SlotID == slot.SlotID &&
-                        x.SectionID == section.SectionID && x.TeacherID == teacher.TeacherID);
+                        x.ClassID == cls.ClassID && x.SlotID == slot?.SlotID &&
+                        x.SectionID == section?.SectionID && x.TeacherID == teacher?.TeacherID);
 
                     if (cc == null)
                     {
-                        // Same rule as CurrentClassRepository.CheckTeacherSlotConflictAsync: a
-                        // teacher cannot have a second CurrentClass row in the same slot+term,
-                        // even for the same class under a different section.
-                        var conflict = currentClasses.FirstOrDefault(x => x.TeacherID == teacher.TeacherID && x.SlotID == slot.SlotID);
-                        if (conflict != null)
+                        if (teacher != null && slot != null)
                         {
-                            var conflictClassName = classes.FirstOrDefault(c => c.ClassID == conflict.ClassID)?.ClassName ?? "another class";
-                            res.Errors.Add($"Row {i + 2} ({reg}): teacher '{teacher.TeacherName}' is already assigned to '{conflictClassName}' in slot '{slotName}' — cannot auto-create a conflicting class.");
-                            continue;
+                            // Same rule as CurrentClassRepository.CheckTeacherSlotConflictAsync: a
+                            // teacher cannot have a second CurrentClass row in the same slot+term,
+                            // even for the same class under a different section.
+                            var conflict = currentClasses.FirstOrDefault(x => x.TeacherID == teacher.TeacherID && x.SlotID == slot.SlotID);
+                            if (conflict != null)
+                            {
+                                var conflictClassName = classes.FirstOrDefault(c => c.ClassID == conflict.ClassID)?.ClassName ?? "another class";
+                                res.Errors.Add($"Row {i + 2} ({reg}): teacher '{teacher.TeacherName}' is already assigned to '{conflictClassName}' in slot '{S(r.Slot)}' — cannot auto-create a conflicting class.");
+                                continue;
+                            }
                         }
 
                         cc = new CurrentClass
                         {
                             CurrentClassID = Guid.NewGuid(),
                             ClassID = cls.ClassID,
-                            SlotID = slot.SlotID,
-                            SectionID = section.SectionID,
-                            TeacherID = teacher.TeacherID,
+                            SlotID = slot?.SlotID,
+                            SectionID = section?.SectionID,
+                            TeacherID = teacher?.TeacherID,
                             TermID = activeTerm.TermID,
                             IsActive = true,
                             CreatedOn = DateTime.Now,
