@@ -141,16 +141,10 @@ namespace InstituteWebAPI.Controllers
         [HttpGet("search")]
         public async Task<IActionResult> Search([FromQuery] string q = "")
         {
-            var students = await studentRepository.GetAllAsync(null, null, "studentName", true, 1, 200);
-            if (!string.IsNullOrWhiteSpace(q))
-            {
-                var ql = q.Trim().ToLower();
-                students = students.Where(s =>
-                    (s.StudentName   ?? "").ToLower().Contains(ql) ||
-                    (s.RegistrationNo ?? "").ToLower().Contains(ql) ||
-                    (s.FatherName    ?? "").ToLower().Contains(ql)
-                ).ToList();
-            }
+            // Searches the full Students table (not a pre-capped page), so a match by
+            // name, registration no, or father name is always found regardless of how
+            // many students exist or where the match falls alphabetically.
+            var students = await studentRepository.SearchAsync(q, 50);
             return Ok(mapper.Map<List<StudentDto>>(students));
         }
 

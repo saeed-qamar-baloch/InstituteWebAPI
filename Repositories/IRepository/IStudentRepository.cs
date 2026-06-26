@@ -16,5 +16,6 @@ namespace InstituteWebAPI.Repositories.IRepository
         Task<Students?> GetByFatherNameAsync(string fatherName);
         Task<Students?> GetByPhoneAsync(string phone);
         Task<Students?> GetByCnicAsync(string cnic);
+        Task<List<Students>> SearchAsync(string? q, int limit = 50);
     }
 }

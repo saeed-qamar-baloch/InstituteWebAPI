@@ -89,6 +89,28 @@ namespace InstituteWebAPI.Repositories.Repository
                 .FirstOrDefaultAsync(s => s.StudentName.Contains(name));
         }
 
+        // 🔎 Full-table picker search — matches name, registration no, or father name.
+        // Filters at the database level (not a pre-capped/sorted page) so a match
+        // anywhere in the table is always found, regardless of how many students exist.
+        public async Task<List<Students>> SearchAsync(string? q, int limit = 50)
+        {
+            var query = _DbContext.Students.Include(x => x.Village).AsQueryable();
+
+            if (!string.IsNullOrWhiteSpace(q))
+            {
+                var ql = q.Trim();
+                query = query.Where(s =>
+                    s.StudentName.Contains(ql) ||
+                    s.RegistrationNo.Contains(ql) ||
+                    s.FatherName.Contains(ql));
+            }
+
+            return await query
+                .OrderBy(s => s.StudentName)
+                .Take(limit)
+                .ToListAsync();
+        }
+
         public async Task<Students> AddAsync(Students student)
         {
             var studentName = student.StudentName?.Trim().ToLowerInvariant();
