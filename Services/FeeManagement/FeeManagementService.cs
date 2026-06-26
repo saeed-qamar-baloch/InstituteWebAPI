@@ -163,6 +163,24 @@ namespace InstituteWebAPI.Services.FeeManagement
 
                 var totalDue = due.BaseAmount + (due.IsLateFeeWaived ? 0m : due.LateFeeAmount);
                 var paid = due.PaymentDetails.Sum(p => p.PaidAmount);
+
+                // Nothing is actually owed on this due (waived, or a 0-amount one-time
+                // fee) — it is settled regardless of payment history. Without this check,
+                // the "paid <= 0" branch below would relabel it Unpaid just because no
+                // payment was ever recorded against it, which both shows "PKR 0 / Unpaid"
+                // to the admin and makes the student count as a fee defaulter on the
+                // Dashboard/Reports pages (those read Status straight from the database).
+                if (totalDue <= 0m)
+                {
+                    if (due.Status == FeeDueStatus.Unpaid || due.Status == FeeDueStatus.Partial)
+                    {
+                        due.Status = FeeDueStatus.Waived;
+                        hasChanges = true;
+                    }
+
+                    continue;
+                }
+
                 if (paid <= 0m)
                 {
                     if (due.Status != FeeDueStatus.Unpaid)
