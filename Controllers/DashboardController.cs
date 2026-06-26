@@ -54,14 +54,18 @@ namespace InstituteWebAPI.Controllers
                 .Where(pd => pd.Payment.PaymentDate >= monthStart)
                 .SumAsync(pd => (decimal?)pd.PaidAmount) ?? 0m;
 
-            // Defaulters: active admissions with overdue Unpaid/Partial dues
+            // Defaulters: active admissions with overdue Unpaid/Partial dues.
+            // A due with nothing actually owed (waived, or a 0-amount fee) is never a
+            // real default, even if its stored Status hasn't been self-healed to
+            // Waived yet by GetUnpaidDuesAsync.
             var defaulterCount = await dbContext.FeeDues
                 .AsNoTracking()
                 .Include(d => d.Admission)
                 .Where(d =>
                     d.DueDate < today &&
                     d.Admission.IsActive &&
-                    (d.Status == FeeDueStatus.Unpaid || d.Status == FeeDueStatus.Partial))
+                    (d.Status == FeeDueStatus.Unpaid || d.Status == FeeDueStatus.Partial) &&
+                    (d.BaseAmount + (d.IsLateFeeWaived ? 0m : d.LateFeeAmount)) > 0m)
                 .Select(d => d.Admission.StudentID)
                 .Distinct()
                 .CountAsync();
@@ -72,7 +76,8 @@ namespace InstituteWebAPI.Controllers
                 .Include(d => d.Admission)
                 .Include(d => d.PaymentDetails)
                 .Where(d => d.Admission.IsActive &&
-                            (d.Status == FeeDueStatus.Unpaid || d.Status == FeeDueStatus.Partial))
+                            (d.Status == FeeDueStatus.Unpaid || d.Status == FeeDueStatus.Partial) &&
+                            (d.BaseAmount + (d.IsLateFeeWaived ? 0m : d.LateFeeAmount)) > 0m)
                 .ToListAsync();
 
             var outstandingBalance = allDues.Sum(d =>

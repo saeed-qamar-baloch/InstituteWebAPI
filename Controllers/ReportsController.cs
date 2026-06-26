@@ -41,7 +41,11 @@ namespace InstituteWebAPI.Controllers
                 .Where(d =>
                     d.DueDate < today &&
                     (d.Status == FeeDueStatus.Unpaid || d.Status == FeeDueStatus.Partial) &&
-                    d.Admission.IsActive);
+                    d.Admission.IsActive &&
+                    // A due with nothing actually owed (waived, or a 0-amount fee) is
+                    // never a real default, even if its stored Status hasn't been
+                    // self-healed to Waived yet by GetUnpaidDuesAsync.
+                    (d.BaseAmount + (d.IsLateFeeWaived ? 0m : d.LateFeeAmount)) > 0m);
 
             if (courseId.HasValue)
                 query = query.Where(d => d.Admission.CourseID == courseId.Value);
@@ -544,7 +548,8 @@ namespace InstituteWebAPI.Controllers
                         Collected = g.SelectMany(d => d.PaymentDetails).Sum(p => p.PaidAmount)
                     }),
                 OverdueCount   = dues.Count(d => d.DueDate < today &&
-                                    (d.Status == FeeDueStatus.Unpaid || d.Status == FeeDueStatus.Partial))
+                                    (d.Status == FeeDueStatus.Unpaid || d.Status == FeeDueStatus.Partial) &&
+                                    (d.BaseAmount + (d.IsLateFeeWaived ? 0m : d.LateFeeAmount)) > 0m)
             };
 
             return Ok(summary);
