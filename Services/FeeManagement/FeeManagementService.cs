@@ -67,7 +67,7 @@ namespace InstituteWebAPI.Services.FeeManagement
             }
 
             var startMonth = new DateTime(admission.RegistrationDate.Year, admission.RegistrationDate.Month, 1);
-            var now = DateTime.UtcNow;
+            var now = PakistanNow();
             var endMonth = new DateTime(now.Year, now.Month, 1);
 
             var settings = await GetFeeSettingsValuesAsync();
@@ -86,7 +86,7 @@ namespace InstituteWebAPI.Services.FeeManagement
             // so we only need to know about months up to endMonth.
             var existingMonths = await repository.GetExistingMonthlyFeeMonthsAsync(admission.AdmissionID, startMonth, endMonth);
             var existingMonthSet = new HashSet<DateTime>(existingMonths.Select(m => new DateTime(m.Year, m.Month, 1)));
-            var today = DateTime.UtcNow.Date;
+            var today = PakistanNow().Date;
 
             var created = await BuildMonthlyDuesForAdmissionAsync(admission, startMonth, endMonth, existingMonthSet, settings, today, now);
 
@@ -150,7 +150,7 @@ namespace InstituteWebAPI.Services.FeeManagement
             var effectiveDueDay = admission.DueDate ?? admission.RegistrationDate.Day;
             var dueDay  = Math.Min(effectiveDueDay, DateTime.DaysInMonth(targetMonth.Year, targetMonth.Month));
             var dueDate = new DateTime(targetMonth.Year, targetMonth.Month, dueDay);
-            var today   = DateTime.UtcNow.Date;
+            var today   = PakistanNow().Date;
 
             // Same one-time 25th-rule as BuildMonthlyDuesForAdmissionAsync: if this is
             // being generated for the admission month itself and the student actually
@@ -296,7 +296,7 @@ namespace InstituteWebAPI.Services.FeeManagement
         public async Task<IReadOnlyList<FeeDueDto>> GetUnpaidDuesAsync(Guid studentId)
         {
             var dues = await repository.GetUnpaidDuesByStudentAsync(studentId);
-            var today = DateTime.UtcNow.Date;
+            var today = PakistanNow().Date;
             var hasChanges = false;
             var settings = await GetFeeSettingsValuesAsync();
             var remainingDues = new List<FeeDue>();
@@ -425,7 +425,7 @@ namespace InstituteWebAPI.Services.FeeManagement
                 throw new InvalidOperationException("One or more dues are not available for payment.");
             }
 
-            var today = DateTime.UtcNow.Date;
+            var today = PakistanNow().Date;
             var settings = await GetFeeSettingsValuesAsync();
             var paymentDetails = new List<PaymentDetail>();
             var totalAmount = 0m;
@@ -647,7 +647,7 @@ namespace InstituteWebAPI.Services.FeeManagement
 
             var result = new WaiveMonthsResultDto { ScholarshipId = leave.ScholarshipID };
             var toCreate = new List<FeeDue>();
-            var now = DateTime.UtcNow;
+            var now = PakistanNow();
 
             for (var m = from; m <= to; m = m.AddMonths(1))
             {
@@ -769,7 +769,7 @@ namespace InstituteWebAPI.Services.FeeManagement
                 throw new InvalidOperationException("Card fee amount is not configured.");
             }
 
-            var today = DateTime.UtcNow.Date;
+            var today = PakistanNow().Date;
             var due = BuildOneTimeFee(admission, FeeDueType.Card, settings.CardFeeAmount, settings.LateFeeAmount, today);
 
             await repository.AddFeeDuesAsync(new[] { due });
@@ -788,7 +788,7 @@ namespace InstituteWebAPI.Services.FeeManagement
             amount = NormalizeAmount(amount);
             if (amount <= 0) return null;
 
-            var today = DateTime.UtcNow.Date;
+            var today = PakistanNow().Date;
             var due = BuildOneTimeFee(admission, FeeDueType.Card, amount, settings.LateFeeAmount, today);
 
             await repository.AddFeeDuesAsync(new[] { due });
@@ -822,7 +822,7 @@ namespace InstituteWebAPI.Services.FeeManagement
                 throw new InvalidOperationException("Admission fee is already generated for this admission.");
             }
 
-            var today = DateTime.UtcNow.Date;
+            var today = PakistanNow().Date;
             var due = BuildOneTimeFee(admission, FeeDueType.Admission, settings.AdmissionFeeAmount, settings.LateFeeAmount, today);
 
             await repository.AddFeeDuesAsync(new[] { due });
@@ -889,6 +889,14 @@ namespace InstituteWebAPI.Services.FeeManagement
         private static decimal NormalizeAmount(decimal amount) =>
             FeeCalculator.NormalizeAmount(amount);
 
+        /// <summary>
+        /// Returns the current date/time in Pakistan Standard Time (UTC+5).
+        /// Pakistan does not observe DST, so +5 h is always correct.
+        /// Used everywhere a month boundary or due-date comparison is needed so that
+        /// the fee engine sees the correct local date regardless of the server's timezone.
+        /// </summary>
+        private static DateTime PakistanNow() => DateTime.UtcNow.AddHours(5);
+
         // ── Fee matrix ────────────────────────────────────────────────────────
         public async Task<FeeMatrixDto> GetFeeMatrixAsync(Guid? classId, Guid? teacherId, string? status)
         {
@@ -897,7 +905,7 @@ namespace InstituteWebAPI.Services.FeeManagement
                 return new FeeMatrixDto();
 
             var termId     = activeTerm.TermID;
-            var today      = DateTime.UtcNow;
+            var today      = PakistanNow();
             var currentMonth = new DateTime(today.Year, today.Month, 1); // don't show future months
 
             // All class-students in this term (optionally filtered)
@@ -1059,8 +1067,8 @@ namespace InstituteWebAPI.Services.FeeManagement
             var result = new BulkGenerateResultDto { AdmissionsProcessed = admissions.Count };
 
             var settings = await GetFeeSettingsValuesAsync();
-            var today = DateTime.UtcNow.Date;
-            var now = DateTime.UtcNow;
+            var today = PakistanNow().Date;
+            var now = PakistanNow();
 
             foreach (var admission in admissions)
             {
