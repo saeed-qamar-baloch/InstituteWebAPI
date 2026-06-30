@@ -148,7 +148,18 @@ namespace InstituteWebAPI.Controllers
                 .AsNoTracking()
                 .Include(cs => cs.Student)
                 .Where(cs => cs.CurrentClassID == currentClassId && cs.Status == "Enrolled")
-                .Select(cs => new { cs.StudentID, cs.Student.RegistrationNo, cs.Student.StudentName, cs.Student.FatherName })
+                .Select(cs => new
+                {
+                    cs.StudentID,
+                    cs.Student.RegistrationNo,
+                    cs.Student.StudentName,
+                    cs.Student.FatherName,
+                    RegistrationDate = cs.Student.Admissions
+                        .Where(a => a.IsActive)
+                        .OrderByDescending(a => a.RegistrationDate)
+                        .Select(a => (DateTime?)a.RegistrationDate)
+                        .FirstOrDefault()
+                })
                 .OrderBy(x => x.StudentName)
                 .ToListAsync();
 
@@ -167,13 +178,28 @@ namespace InstituteWebAPI.Controllers
                 Date = day,
                 CurrentClassID = currentClassId,
                 IsMarked = existing.Count > 0,
-                Students = students.Select(s => new AttendanceStudentRowDto
+                Students = students.Select(s =>
                 {
-                    StudentID = s.StudentID,
-                    RegistrationNo = s.RegistrationNo,
-                    StudentName = s.StudentName,
-                    FatherName = s.FatherName,
-                    Status = existingLookup.TryGetValue(s.StudentID, out var st) ? st : AttendanceStatus.Present
+                    // If the attendance date is before the student's current admission
+                    // RegistrationDate, attendance simply doesn't apply yet — show NR
+                    // rather than letting them be marked Present/Absent for a day they
+                    // weren't registered.
+                    var isNotYetRegistered = s.RegistrationDate.HasValue && day < s.RegistrationDate.Value.Date;
+
+                    // If there's no saved record for this date, leave Status null so the
+                    // UI shows "Not marked" instead of silently defaulting to Present.
+                    AttendanceStatus? resolvedStatus = isNotYetRegistered
+                        ? AttendanceStatus.NR
+                        : (existingLookup.TryGetValue(s.StudentID, out var st) ? st : (AttendanceStatus?)null);
+
+                    return new AttendanceStudentRowDto
+                    {
+                        StudentID = s.StudentID,
+                        RegistrationNo = s.RegistrationNo,
+                        StudentName = s.StudentName,
+                        FatherName = s.FatherName,
+                        Status = resolvedStatus
+                    };
                 }).ToList()
             };
 
@@ -212,17 +238,46 @@ namespace InstituteWebAPI.Controllers
             if (allowed.Count != studentIds.Count)
                 return BadRequest("One or more students are not enrolled in the selected class.");
 
+            // Students whose admission RegistrationDate is after this attendance date are NR
+            // for this date — never persist a real status for them, regardless of what the
+            // client sent (the sheet UI disables editing for these rows, but guard server-side too).
+            var registrationDates = await dbContext.Students
+                .Where(s => studentIds.Contains(s.StudentID))
+                .Select(s => new
+                {
+                    s.StudentID,
+                    RegistrationDate = s.Admissions
+                        .Where(a => a.IsActive)
+                        .OrderByDescending(a => a.RegistrationDate)
+                        .Select(a => (DateTime?)a.RegistrationDate)
+                        .FirstOrDefault()
+                })
+                .ToDictionaryAsync(x => x.StudentID, x => x.RegistrationDate);
+
+            var notYetRegisteredIds = studentIds
+                .Where(id => registrationDates.TryGetValue(id, out var reg) && reg.HasValue && day < reg.Value.Date)
+                .ToHashSet();
+
+            // Rows the teacher never touched (Status == null) are not "marked Present" —
+            // they should simply not be persisted, so they keep showing as "Not marked"
+            // until the teacher actually clicks a status for them.
+            var studentsToSave = dto.Students
+                .Where(s => !notYetRegisteredIds.Contains(s.StudentID) && s.Status.HasValue)
+                .ToList();
+
             var existing = await dbContext.StudentAttendances
                 .Where(a => a.CurrentClassID == dto.CurrentClassID && a.AttendanceDate == day && studentIds.Contains(a.StudentID))
                 .ToListAsync();
 
             var existingByStudent = existing.ToDictionary(x => x.StudentID, x => x);
 
-            foreach (var s in dto.Students)
+            foreach (var s in studentsToSave)
             {
+                var status = s.Status!.Value;
+
                 if (existingByStudent.TryGetValue(s.StudentID, out var row))
                 {
-                    row.Status = s.Status;
+                    row.Status = status;
                     row.MarkedByTeacherID = teacherId;
                     row.UpdatedOn = DateTime.UtcNow;
                 }
@@ -234,7 +289,7 @@ namespace InstituteWebAPI.Controllers
                         AttendanceDate = day,
                         CurrentClassID = dto.CurrentClassID,
                         StudentID = s.StudentID,
-                        Status = s.Status,
+                        Status = status,
                         MarkedByTeacherID = teacherId,
                         CreatedOn = DateTime.UtcNow
                     });
@@ -255,6 +310,15 @@ namespace InstituteWebAPI.Controllers
             var start = new DateTime(selectedYear, 1, 1);
             var end = new DateTime(selectedYear, 12, 31);
 
+            var registrationDate = await dbContext.Students
+                .Where(s => s.StudentID == studentId)
+                .Select(s => s.Admissions
+                    .Where(a => a.IsActive)
+                    .OrderByDescending(a => a.RegistrationDate)
+                    .Select(a => (DateTime?)a.RegistrationDate)
+                    .FirstOrDefault())
+                .FirstOrDefaultAsync();
+
             var entries = await dbContext.StudentAttendances
                 .AsNoTracking()
                 .Where(a => a.StudentID == studentId && a.AttendanceDate >= start && a.AttendanceDate <= end)
@@ -271,6 +335,7 @@ namespace InstituteWebAPI.Controllers
                 AttendanceStatus.Absent => "A",
                 AttendanceStatus.Leave => "H",
                 AttendanceStatus.Late => "L",
+                AttendanceStatus.NR => "NR",
                 _ => string.Empty
             };
 
@@ -279,7 +344,20 @@ namespace InstituteWebAPI.Controllers
                 {
                     Month = m,
                     Days = Enumerable.Range(1, 30)
-                        .Select(d => lookup.TryGetValue((m, d), out var status) ? MapStatus(status) : string.Empty)
+                        .Select(d =>
+                        {
+                            if (lookup.TryGetValue((m, d), out var status))
+                                return MapStatus(status);
+
+                            // No record for this day. If it falls before the student's
+                            // current admission date, mark NR rather than leaving it blank.
+                            if (registrationDate.HasValue)
+                            {
+                                var thisDay = new DateTime(selectedYear, m, Math.Min(d, DateTime.DaysInMonth(selectedYear, m)));
+                                if (thisDay < registrationDate.Value.Date) return "NR";
+                            }
+                            return string.Empty;
+                        })
                         .ToList()
                 })
                 .ToList();

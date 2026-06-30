@@ -10,7 +10,9 @@ namespace InstituteWebAPI.Models.DTO.Attendance
         public string? StudentName { get; set; }
         public string? FatherName { get; set; }
 
-        public AttendanceStatus Status { get; set; } = AttendanceStatus.Present;
+        // Null means the teacher has not marked this student yet for the
+        // selected date (distinct from AttendanceStatus.Present).
+        public AttendanceStatus? Status { get; set; }
     }
 
     public class AttendanceSheetDto
@@ -38,8 +40,9 @@ namespace InstituteWebAPI.Models.DTO.Attendance
         [Required]
         public Guid StudentID { get; set; }
 
-        [Required]
-        public AttendanceStatus Status { get; set; } = AttendanceStatus.Present;
+        // Null means this student was never marked by the teacher for this
+        // date — the row is skipped on save rather than persisted as Present.
+        public AttendanceStatus? Status { get; set; }
     }
 
     public class StudentAttendanceCalendarDto

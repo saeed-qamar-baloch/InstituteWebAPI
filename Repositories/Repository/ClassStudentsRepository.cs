@@ -16,12 +16,23 @@ namespace InstituteWebAPI.Repositories.Repository
 
         public async Task<ClassStudents> AddAsync(ClassStudents classStudent)
         {
-            var duplicate = await dbContext.ClassStudents
-                .AnyAsync(cs => cs.CurrentClassID == classStudent.CurrentClassID
-                             && cs.StudentID       == classStudent.StudentID);
+            var existing = await dbContext.ClassStudents
+                .FirstOrDefaultAsync(cs => cs.CurrentClassID == classStudent.CurrentClassID
+                                         && cs.StudentID       == classStudent.StudentID);
 
-            if (duplicate)
-                throw new InvalidOperationException("This student is already enrolled in this class.");
+            if (existing != null)
+            {
+                // A row already exists for this student+class. If it's stuck on a
+                // non-matching status (e.g. left over from a bad import, or a prior
+                // "Inactive"/"Suspended" state), reactivate it instead of silently
+                // leaving the student excluded from attendance/marks/reports.
+                if (existing.Status == classStudent.Status)
+                    throw new InvalidOperationException("This student is already enrolled in this class.");
+
+                existing.Status = classStudent.Status;
+                await dbContext.SaveChangesAsync();
+                return existing;
+            }
 
             await dbContext.ClassStudents.AddAsync(classStudent);
             await dbContext.SaveChangesAsync();
@@ -30,19 +41,54 @@ namespace InstituteWebAPI.Repositories.Repository
 
         /// <summary>
         /// Assigns multiple students to a class in one call.
-        /// Duplicates are silently skipped; the caller gets a summary of what was assigned vs skipped.
+        /// If a student already has a row for this class whose Status doesn't match
+        /// the target status (e.g. left over from a bad import, or "Inactive"/"Suspended"),
+        /// it is reactivated/updated rather than silently skipped — otherwise the student
+        /// stays permanently excluded from attendance/marks/reports even after being
+        /// "added" again. Only rows already on the exact target status are true no-op skips.
         /// </summary>
         public async Task<(int assigned, List<string> skippedNames)> BulkAddAsync(
             Guid currentClassId, List<Guid> studentIds, string status)
         {
-            // Fetch already-enrolled student IDs for this class (single query)
-            var alreadyEnrolled = await dbContext.ClassStudents
-                .Where(cs => cs.CurrentClassID == currentClassId)
-                .Select(cs => cs.StudentID)
-                .ToHashSetAsync();
+            // Fetch existing rows for this class among the requested students (tracked, so we can update)
+            var existingRows = await dbContext.ClassStudents
+                .Where(cs => cs.CurrentClassID == currentClassId && studentIds.Contains(cs.StudentID))
+                .ToListAsync();
+            var existingByStudent = existingRows.ToDictionary(cs => cs.StudentID);
 
-            // Fetch names for any duplicates so we can report them
-            var skippedIds   = studentIds.Where(id => alreadyEnrolled.Contains(id)).ToList();
+            var skippedIds = new List<Guid>();
+            var reactivatedOrAdded = 0;
+
+            foreach (var studentId in studentIds)
+            {
+                if (existingByStudent.TryGetValue(studentId, out var row))
+                {
+                    if (string.Equals(row.Status, status, StringComparison.OrdinalIgnoreCase))
+                    {
+                        skippedIds.Add(studentId);
+                    }
+                    else
+                    {
+                        row.Status = status;
+                        reactivatedOrAdded++;
+                    }
+                }
+                else
+                {
+                    dbContext.ClassStudents.Add(new ClassStudents
+                    {
+                        ClassStudentID = Guid.NewGuid(),
+                        CurrentClassID = currentClassId,
+                        StudentID      = studentId,
+                        Status         = status,
+                    });
+                    reactivatedOrAdded++;
+                }
+            }
+
+            if (reactivatedOrAdded > 0)
+                await dbContext.SaveChangesAsync();
+
             var skippedNames = new List<string>();
             if (skippedIds.Any())
             {
@@ -52,22 +98,7 @@ namespace InstituteWebAPI.Repositories.Repository
                     .ToListAsync();
             }
 
-            var toAdd = studentIds.Where(id => !alreadyEnrolled.Contains(id)).ToList();
-            foreach (var studentId in toAdd)
-            {
-                dbContext.ClassStudents.Add(new ClassStudents
-                {
-                    ClassStudentID = Guid.NewGuid(),
-                    CurrentClassID = currentClassId,
-                    StudentID      = studentId,
-                    Status         = status,
-                });
-            }
-
-            if (toAdd.Any())
-                await dbContext.SaveChangesAsync();
-
-            return (toAdd.Count, skippedNames);
+            return (reactivatedOrAdded, skippedNames);
         }
 
         public async Task<ClassStudents?> DeleteAsync(Guid id)

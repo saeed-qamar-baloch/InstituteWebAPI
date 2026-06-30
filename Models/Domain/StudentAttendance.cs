@@ -8,7 +8,14 @@ namespace InstituteWebApp.Models.Domain
         Present = 0,
         Absent = 1,
         Leave = 2,
-        Late = 3
+        Late = 3,
+
+        /// <summary>
+        /// Not Registered — the attendance date falls before the student's
+        /// current admission RegistrationDate, so attendance does not apply.
+        /// Mirrors the FeeDueStatus.NR concept used in the fee module.
+        /// </summary>
+        NR = 4
     }
 
     public class StudentAttendance

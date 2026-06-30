@@ -291,7 +291,12 @@ namespace InstituteWebAPI.Controllers
                     cs.StudentID,
                     cs.Student.StudentName,
                     cs.Student.RegistrationNo,
-                    ClassName = cs.CurrentClass.Class.ClassName
+                    ClassName = cs.CurrentClass.Class.ClassName,
+                    RegistrationDate = cs.Student.Admissions
+                        .Where(a => a.IsActive)
+                        .OrderByDescending(a => a.RegistrationDate)
+                        .Select(a => (DateTime?)a.RegistrationDate)
+                        .FirstOrDefault()
                 })
                 .OrderBy(x => x.StudentName)
                 .ToListAsync();
@@ -333,6 +338,15 @@ namespace InstituteWebAPI.Controllers
                 var total   = present + absent + late + leave;
                 var pct     = total > 0 ? Math.Round((double)(present + late) / total * 100, 1) : 0.0;
 
+                // Days in this month before the student's current admission date — Not
+                // Registered, not counted against them. Clipped to the month/range bounds.
+                var nr = 0;
+                if (s.RegistrationDate.HasValue && s.RegistrationDate.Value.Date > startDate)
+                {
+                    var nrEnd = s.RegistrationDate.Value.Date <= endDate.AddDays(1) ? s.RegistrationDate.Value.Date : endDate.AddDays(1);
+                    nr = Math.Max(0, (nrEnd - startDate).Days);
+                }
+
                 return new
                 {
                     s.StudentID,
@@ -342,6 +356,7 @@ namespace InstituteWebAPI.Controllers
                     Absent       = absent,
                     Late         = late,
                     Leave        = leave,
+                    NR           = nr,
                     TotalMarked  = total,
                     AttendancePct = pct
                 };
