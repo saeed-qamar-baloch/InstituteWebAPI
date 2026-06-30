@@ -65,7 +65,8 @@ namespace InstituteWebAPI.Controllers
                     d.DueDate < today &&
                     d.Admission.IsActive &&
                     (d.Status == FeeDueStatus.Unpaid || d.Status == FeeDueStatus.Partial) &&
-                    (d.BaseAmount + (d.IsLateFeeWaived ? 0m : d.LateFeeAmount)) > 0m)
+                    (d.BaseAmount + (d.IsLateFeeWaived ? 0m : d.LateFeeAmount)) > 0m &&
+                    d.Status != FeeDueStatus.NR)
                 .Select(d => d.Admission.StudentID)
                 .Distinct()
                 .CountAsync();
@@ -77,7 +78,8 @@ namespace InstituteWebAPI.Controllers
                 .Include(d => d.PaymentDetails)
                 .Where(d => d.Admission.IsActive &&
                             (d.Status == FeeDueStatus.Unpaid || d.Status == FeeDueStatus.Partial) &&
-                            (d.BaseAmount + (d.IsLateFeeWaived ? 0m : d.LateFeeAmount)) > 0m)
+                            (d.BaseAmount + (d.IsLateFeeWaived ? 0m : d.LateFeeAmount)) > 0m &&
+                            d.Status != FeeDueStatus.NR)
                 .ToListAsync();
 
             var outstandingBalance = allDues.Sum(d =>

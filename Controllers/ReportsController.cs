@@ -44,8 +44,12 @@ namespace InstituteWebAPI.Controllers
                     d.Admission.IsActive &&
                     // A due with nothing actually owed (waived, or a 0-amount fee) is
                     // never a real default, even if its stored Status hasn't been
-                    // self-healed to Waived yet by GetUnpaidDuesAsync.
-                    (d.BaseAmount + (d.IsLateFeeWaived ? 0m : d.LateFeeAmount)) > 0m);
+                    // self-healed to Waived yet by GetUnpaidDuesAsync. NR ("Not
+                    // Registered") admission-month placeholders are excluded explicitly
+                    // too — the amount check already covers them, but this keeps intent
+                    // clear even if NR dues ever carry a nonzero amount in the future.
+                    (d.BaseAmount + (d.IsLateFeeWaived ? 0m : d.LateFeeAmount)) > 0m &&
+                    d.Status != FeeDueStatus.NR);
 
             if (courseId.HasValue)
                 query = query.Where(d => d.Admission.CourseID == courseId.Value);
@@ -549,7 +553,8 @@ namespace InstituteWebAPI.Controllers
                     }),
                 OverdueCount   = dues.Count(d => d.DueDate < today &&
                                     (d.Status == FeeDueStatus.Unpaid || d.Status == FeeDueStatus.Partial) &&
-                                    (d.BaseAmount + (d.IsLateFeeWaived ? 0m : d.LateFeeAmount)) > 0m)
+                                    (d.BaseAmount + (d.IsLateFeeWaived ? 0m : d.LateFeeAmount)) > 0m &&
+                                    d.Status != FeeDueStatus.NR)
             };
 
             return Ok(summary);

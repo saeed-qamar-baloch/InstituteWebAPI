@@ -6,6 +6,14 @@ namespace InstituteWebAPI.Services.FeeManagement
     public interface IFeeManagementService
     {
         Task<IReadOnlyList<FeeDueDto>> GenerateMonthlyDuesAsync(Guid studentId);
+
+        /// <summary>
+        /// Generates a Monthly fee due for one specific month/year, even if that
+        /// month is in the future relative to today. Lets an admin collect a future
+        /// month's fee in advance. Throws if a due for that month already exists,
+        /// the month is before admission, or the student has no monthly fee/is free.
+        /// </summary>
+        Task<FeeDueDto> GenerateMonthlyDueForMonthAsync(Guid studentId, int year, int month);
         Task<IReadOnlyList<FeeDueDto>> GetUnpaidDuesAsync(Guid studentId);
         Task<PaymentDto> CollectFeeAsync(CollectFeeRequestDto request);
         Task<FeeDueDto?> WaiveLateFeeAsync(Guid feeDueId);

@@ -166,6 +166,7 @@ namespace InstituteWebAPI.Controllers
             {
                 Date = day,
                 CurrentClassID = currentClassId,
+                IsMarked = existing.Count > 0,
                 Students = students.Select(s => new AttendanceStudentRowDto
                 {
                     StudentID = s.StudentID,

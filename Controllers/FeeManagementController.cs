@@ -58,6 +58,24 @@ namespace InstituteWebAPI.Controllers
             }
         }
 
+        // ── POST api/fee-management/students/{studentId}/generate-monthly-dues/{year}/{month} ──
+        // Generates a single Monthly fee due for a specific month/year, even if that
+        // month is still in the future. Lets an admin collect, e.g., July's fee while
+        // June is the current month.
+        [HttpPost("students/{studentId:guid}/generate-monthly-dues/{year:int}/{month:int}")]
+        public async Task<IActionResult> GenerateMonthlyDueForMonth(Guid studentId, int year, int month)
+        {
+            try
+            {
+                var due = await service.GenerateMonthlyDueForMonthAsync(studentId, year, month);
+                return Ok(due);
+            }
+            catch (InvalidOperationException ex)
+            {
+                return BadRequest(ex.Message);
+            }
+        }
+
         [HttpGet("students/{studentId:guid}/unpaid-dues")]
         public async Task<IActionResult> GetUnpaidDues(Guid studentId)
         {

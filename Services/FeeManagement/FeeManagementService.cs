@@ -66,10 +66,6 @@ namespace InstituteWebAPI.Services.FeeManagement
                 return Array.Empty<FeeDueDto>();
             }
 
-            // Due day may be unset on older/imported admissions — fall back to the
-            // registration day rather than failing the whole generation.
-            var effectiveDueDay = admission.DueDate ?? admission.RegistrationDate.Day;
-
             var startMonth = new DateTime(admission.RegistrationDate.Year, admission.RegistrationDate.Month, 1);
             var now = DateTime.UtcNow;
             var endMonth = new DateTime(now.Year, now.Month, 1);
@@ -86,49 +82,13 @@ namespace InstituteWebAPI.Services.FeeManagement
                 return Array.Empty<FeeDueDto>();
             }
 
-            // Look one month past endMonth: the 25th-rule labels the last month's due
-            // as the NEXT month, so it must be matched to avoid a duplicate insert
-            // (unique index on AdmissionId+FeeType+FeeMonth).
-            var existingMonths = await repository.GetExistingMonthlyFeeMonthsAsync(admission.AdmissionID, startMonth, endMonth.AddMonths(1));
-            // existingMonthSet uses the LABEL month (FeeMonth stored in DB, already 25th-rule-adjusted)
+            // No future-month shifting happens any more (see BuildMonthlyDuesForAdmissionAsync),
+            // so we only need to know about months up to endMonth.
+            var existingMonths = await repository.GetExistingMonthlyFeeMonthsAsync(admission.AdmissionID, startMonth, endMonth);
             var existingMonthSet = new HashSet<DateTime>(existingMonths.Select(m => new DateTime(m.Year, m.Month, 1)));
-            var created = new List<FeeDue>();
-            var current = startMonth;
             var today = DateTime.UtcNow.Date;
 
-            await AddOneTimeFeeIfMissingAsync(admission, FeeDueType.Admission, settings.AdmissionFeeAmount, settings.LateFeeAmount, today, created);
-
-            while (current <= endMonth)
-            {
-                var dueDay    = Math.Min(effectiveDueDay, DateTime.DaysInMonth(current.Year, current.Month));
-                var dueDate   = new DateTime(current.Year, current.Month, dueDay);
-
-                // 25th-rule: if the due day falls on or after the 25th, this payment
-                // is considered an advance for the NEXT calendar month.
-                var labelMonth = dueDay >= 25 ? current.AddMonths(1) : current;
-
-                if (!existingMonthSet.Contains(labelMonth))
-                {
-                    var (baseAmt, status, applyLate) = await ApplyConcessionAsync(admission.AdmissionID, admission.MonthlyFee, labelMonth);
-                    var isLate = applyLate && today > dueDate.Date;
-
-                    created.Add(new FeeDue
-                    {
-                        FeeDueId        = Guid.NewGuid(),
-                        AdmissionId     = admission.AdmissionID,
-                        FeeType         = FeeDueType.Monthly,
-                        FeeMonth        = labelMonth,   // label shown to users
-                        BaseAmount      = baseAmt,
-                        LateFeeAmount   = isLate ? NormalizeAmount(settings.LateFeeAmount) : 0m,
-                        DueDate         = dueDate,      // physical collection date
-                        IsLateFeeWaived = false,
-                        Status          = status,
-                        CreatedAt       = DateTime.UtcNow
-                    });
-                }
-
-                current = current.AddMonths(1);
-            }
+            var created = await BuildMonthlyDuesForAdmissionAsync(admission, startMonth, endMonth, existingMonthSet, settings, today, now);
 
             if (created.Count > 0)
             {
@@ -137,6 +97,169 @@ namespace InstituteWebAPI.Services.FeeManagement
             }
 
             return mapper.Map<List<FeeDueDto>>(created);
+        }
+
+        /// <summary>
+        /// Generates (or returns the existing) Monthly fee due for a student for one
+        /// specific month/year, even if that month is in the future relative to today.
+        /// Used to let admins collect a future month's fee in advance (e.g. collecting
+        /// July's fee while June is still the current month).
+        /// </summary>
+        public async Task<FeeDueDto> GenerateMonthlyDueForMonthAsync(Guid studentId, int year, int month)
+        {
+            if (month < 1 || month > 12)
+            {
+                throw new InvalidOperationException("Month must be between 1 and 12.");
+            }
+
+            var admission = await repository.GetActiveAdmissionByStudentIdAsync(studentId);
+            if (admission == null)
+            {
+                throw new InvalidOperationException("Active admission not found for the student.");
+            }
+
+            if (admission.IsFree)
+            {
+                throw new InvalidOperationException("This student is marked as free — no fee is charged.");
+            }
+
+            if (admission.MonthlyFee <= 0m)
+            {
+                throw new InvalidOperationException("No monthly fee is configured for this student.");
+            }
+
+            var targetMonth = new DateTime(year, month, 1);
+            var admissionMonth = new DateTime(admission.RegistrationDate.Year, admission.RegistrationDate.Month, 1);
+            if (targetMonth < admissionMonth)
+            {
+                throw new InvalidOperationException("Cannot generate a fee due before the student's admission month.");
+            }
+
+            var settings = await GetFeeSettingsValuesAsync();
+            if (settings.FeeStartMonth.HasValue && targetMonth < settings.FeeStartMonth.Value)
+            {
+                throw new InvalidOperationException("Cannot generate a fee due before the configured fee-start month.");
+            }
+
+            var existingMonths = await repository.GetExistingMonthlyFeeMonthsAsync(admission.AdmissionID, targetMonth, targetMonth);
+            if (existingMonths.Count > 0)
+            {
+                throw new InvalidOperationException("A fee due for this month already exists for this student.");
+            }
+
+            var effectiveDueDay = admission.DueDate ?? admission.RegistrationDate.Day;
+            var dueDay  = Math.Min(effectiveDueDay, DateTime.DaysInMonth(targetMonth.Year, targetMonth.Month));
+            var dueDate = new DateTime(targetMonth.Year, targetMonth.Month, dueDay);
+            var today   = DateTime.UtcNow.Date;
+
+            var (baseAmt, status, applyLate) = await ApplyConcessionAsync(admission.AdmissionID, admission.MonthlyFee, targetMonth);
+            var isLate = applyLate && today > dueDate.Date;
+
+            var due = new FeeDue
+            {
+                FeeDueId        = Guid.NewGuid(),
+                AdmissionId     = admission.AdmissionID,
+                FeeType         = FeeDueType.Monthly,
+                FeeMonth        = targetMonth,
+                BaseAmount      = baseAmt,
+                LateFeeAmount   = isLate ? NormalizeAmount(settings.LateFeeAmount) : 0m,
+                DueDate         = dueDate,
+                IsLateFeeWaived = false,
+                Status          = status,
+                CreatedAt       = DateTime.UtcNow
+            };
+
+            await repository.AddFeeDuesAsync(new[] { due });
+            await repository.SaveChangesAsync();
+
+            return mapper.Map<FeeDueDto>(due);
+        }
+
+        /// <summary>
+        /// Builds the list of new Monthly FeeDues for one admission across
+        /// [startMonth, endMonth], plus the one-time Admission fee if missing.
+        /// Shared by GenerateMonthlyDuesAsync (single student) and
+        /// BulkGenerateMonthlyDuesAsync (all students) so the rules below never diverge.
+        ///
+        /// 25th-rule (one-time, at admission only): if the student's effective due
+        /// day is on/after the 25th, the ADMISSION month's fee is recorded as "NR"
+        /// (Not Registered, zero amount) instead of a normal charge — it never recurs
+        /// in later months. Every other month is generated normally as Unpaid, with
+        /// no label-shifting.
+        /// </summary>
+        private async Task<List<FeeDue>> BuildMonthlyDuesForAdmissionAsync(
+            Admissions admission,
+            DateTime startMonth,
+            DateTime endMonth,
+            HashSet<DateTime> existingMonthSet,
+            (decimal LateFeeAmount, decimal AdmissionFeeAmount, decimal CardFeeAmount, DateTime? FeeStartMonth) settings,
+            DateTime today,
+            DateTime now)
+        {
+            var created = new List<FeeDue>();
+
+            await AddOneTimeFeeIfMissingAsync(admission, FeeDueType.Admission, settings.AdmissionFeeAmount, settings.LateFeeAmount, today, created);
+
+            var effectiveDueDay = admission.DueDate ?? admission.RegistrationDate.Day;
+            var admissionMonth = new DateTime(admission.RegistrationDate.Year, admission.RegistrationDate.Month, 1);
+
+            var current = startMonth;
+            while (current <= endMonth)
+            {
+                var dueDay    = Math.Min(effectiveDueDay, DateTime.DaysInMonth(current.Year, current.Month));
+                var dueDate   = new DateTime(current.Year, current.Month, dueDay);
+                var labelMonth = current; // no recurring shift — only the admission month is special-cased below
+
+                if (existingMonthSet.Contains(labelMonth))
+                {
+                    current = current.AddMonths(1);
+                    continue;
+                }
+
+                // One-time NR rule: only the admission month itself, and only when the
+                // effective due day is on/after the 25th. No real charge is created —
+                // the next month (handled by the next loop iteration) is billed normally.
+                if (current == admissionMonth && effectiveDueDay >= 25)
+                {
+                    created.Add(new FeeDue
+                    {
+                        FeeDueId        = Guid.NewGuid(),
+                        AdmissionId     = admission.AdmissionID,
+                        FeeType         = FeeDueType.Monthly,
+                        FeeMonth        = labelMonth,
+                        BaseAmount      = 0m,
+                        LateFeeAmount   = 0m,
+                        DueDate         = dueDate,
+                        IsLateFeeWaived = true,
+                        Status          = FeeDueStatus.NR,
+                        CreatedAt       = now
+                    });
+
+                    current = current.AddMonths(1);
+                    continue;
+                }
+
+                var (baseAmt, status, applyLate) = await ApplyConcessionAsync(admission.AdmissionID, admission.MonthlyFee, labelMonth);
+                var isLate = applyLate && today > dueDate.Date;
+
+                created.Add(new FeeDue
+                {
+                    FeeDueId        = Guid.NewGuid(),
+                    AdmissionId     = admission.AdmissionID,
+                    FeeType         = FeeDueType.Monthly,
+                    FeeMonth        = labelMonth,
+                    BaseAmount      = baseAmt,
+                    LateFeeAmount   = isLate ? NormalizeAmount(settings.LateFeeAmount) : 0m,
+                    DueDate         = dueDate,
+                    IsLateFeeWaived = false,
+                    Status          = status,
+                    CreatedAt       = now
+                });
+
+                current = current.AddMonths(1);
+            }
+
+            return created;
         }
 
         public async Task<IReadOnlyList<FeeDueDto>> GetUnpaidDuesAsync(Guid studentId)
@@ -900,10 +1023,6 @@ namespace InstituteWebAPI.Services.FeeManagement
                     continue;
                 }
 
-                // Due day may be unset on older/imported admissions — fall back to the
-                // registration day rather than reporting an error.
-                var effectiveDueDay = admission.DueDate ?? admission.RegistrationDate.Day;
-
                 try
                 {
                     var startMonth = new DateTime(admission.RegistrationDate.Year, admission.RegistrationDate.Month, 1);
@@ -917,49 +1036,12 @@ namespace InstituteWebAPI.Services.FeeManagement
 
                     if (startMonth > endMonth) continue;
 
-                    // Look one month past endMonth: with the 25th-rule, the last month's
-                    // due is labelled the NEXT month, so it must be matched to avoid
-                    // re-inserting it (unique index on AdmissionId+FeeType+FeeMonth).
-                    var existingMonths = await repository.GetExistingMonthlyFeeMonthsAsync(admission.AdmissionID, startMonth, endMonth.AddMonths(1));
-                    // existingSet uses label months (FeeMonth in DB, 25th-rule-adjusted)
+                    // No future-month shifting happens any more (see
+                    // BuildMonthlyDuesForAdmissionAsync), so we only need months up to endMonth.
+                    var existingMonths = await repository.GetExistingMonthlyFeeMonthsAsync(admission.AdmissionID, startMonth, endMonth);
                     var existingSet    = new HashSet<DateTime>(existingMonths.Select(m => new DateTime(m.Year, m.Month, 1)));
 
-                    var created = new List<FeeDue>();
-
-                    // Ensure one-time admission fee exists
-                    await AddOneTimeFeeIfMissingAsync(admission, FeeDueType.Admission, settings.AdmissionFeeAmount, settings.LateFeeAmount, today, created);
-
-                    var current = startMonth;
-                    while (current <= endMonth)
-                    {
-                        var dueDay  = Math.Min(effectiveDueDay, DateTime.DaysInMonth(current.Year, current.Month));
-                        var dueDate = new DateTime(current.Year, current.Month, dueDay);
-
-                        // 25th-rule: payment on or after the 25th covers the NEXT month.
-                        var labelMonth = dueDay >= 25 ? current.AddMonths(1) : current;
-
-                        if (!existingSet.Contains(labelMonth))
-                        {
-                            var (baseAmt, status, applyLate) = await ApplyConcessionAsync(admission.AdmissionID, admission.MonthlyFee, labelMonth);
-                            var isLate  = applyLate && today > dueDate.Date;
-
-                            created.Add(new FeeDue
-                            {
-                                FeeDueId         = Guid.NewGuid(),
-                                AdmissionId      = admission.AdmissionID,
-                                FeeType          = FeeDueType.Monthly,
-                                FeeMonth         = labelMonth,   // label shown to users
-                                BaseAmount       = baseAmt,
-                                LateFeeAmount    = isLate ? NormalizeAmount(settings.LateFeeAmount) : 0m,
-                                DueDate          = dueDate,      // physical collection date
-                                IsLateFeeWaived  = false,
-                                Status           = status,
-                                CreatedAt        = now
-                            });
-                        }
-
-                        current = current.AddMonths(1);
-                    }
+                    var created = await BuildMonthlyDuesForAdmissionAsync(admission, startMonth, endMonth, existingSet, settings, today, now);
 
                     if (created.Count > 0)
                     {

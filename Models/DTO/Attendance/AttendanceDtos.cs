@@ -17,6 +17,7 @@ namespace InstituteWebAPI.Models.DTO.Attendance
     {
         public DateTime Date { get; set; }
         public Guid CurrentClassID { get; set; }
+        public bool IsMarked { get; set; }
         public List<AttendanceStudentRowDto> Students { get; set; } = new();
     }
 
