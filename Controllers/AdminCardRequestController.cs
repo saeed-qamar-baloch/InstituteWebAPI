@@ -39,6 +39,7 @@ namespace InstituteWebAPI.Controllers
             public string? FatherName { get; set; }
             public string? Picture { get; set; }
             public string? ClassName { get; set; }
+            public DateTime? RegistrationDate { get; set; }
             public string CardType { get; set; } = "New";
             public decimal Amount { get; set; }
             public string Status { get; set; } = "Requested";
@@ -89,6 +90,11 @@ namespace InstituteWebAPI.Controllers
                     ClassName = c.Student.ClassStudents
                         .Where(cs => cs.Status == "Enrolled")
                         .Select(cs => cs.CurrentClass.Class.ClassName)
+                        .FirstOrDefault(),
+                    RegistrationDate = c.Student.Admissions
+                        .Where(a => a.IsActive)
+                        .OrderByDescending(a => a.RegistrationDate)
+                        .Select(a => (DateTime?)a.RegistrationDate)
                         .FirstOrDefault(),
                     CardType = c.CardType,
                     Amount = c.Amount,
