@@ -152,22 +152,47 @@ namespace InstituteWebAPI.Services.FeeManagement
             var dueDate = new DateTime(targetMonth.Year, targetMonth.Month, dueDay);
             var today   = DateTime.UtcNow.Date;
 
-            var (baseAmt, status, applyLate) = await ApplyConcessionAsync(admission.AdmissionID, admission.MonthlyFee, targetMonth);
-            var isLate = applyLate && today > dueDate.Date;
-
-            var due = new FeeDue
+            // Same one-time 25th-rule as BuildMonthlyDuesForAdmissionAsync: if this is
+            // being generated for the admission month itself and the effective due day
+            // is on/after the 25th, record it as NR instead of a real charge. Without
+            // this check, picking the admission month here (e.g. right after admitting
+            // a student late in the month) would wrongly bill the current month.
+            FeeDue due;
+            if (targetMonth == admissionMonth && effectiveDueDay >= 25)
             {
-                FeeDueId        = Guid.NewGuid(),
-                AdmissionId     = admission.AdmissionID,
-                FeeType         = FeeDueType.Monthly,
-                FeeMonth        = targetMonth,
-                BaseAmount      = baseAmt,
-                LateFeeAmount   = isLate ? NormalizeAmount(settings.LateFeeAmount) : 0m,
-                DueDate         = dueDate,
-                IsLateFeeWaived = false,
-                Status          = status,
-                CreatedAt       = DateTime.UtcNow
-            };
+                due = new FeeDue
+                {
+                    FeeDueId        = Guid.NewGuid(),
+                    AdmissionId     = admission.AdmissionID,
+                    FeeType         = FeeDueType.Monthly,
+                    FeeMonth        = targetMonth,
+                    BaseAmount      = 0m,
+                    LateFeeAmount   = 0m,
+                    DueDate         = dueDate,
+                    IsLateFeeWaived = true,
+                    Status          = FeeDueStatus.NR,
+                    CreatedAt       = DateTime.UtcNow
+                };
+            }
+            else
+            {
+                var (baseAmt, status, applyLate) = await ApplyConcessionAsync(admission.AdmissionID, admission.MonthlyFee, targetMonth);
+                var isLate = applyLate && today > dueDate.Date;
+
+                due = new FeeDue
+                {
+                    FeeDueId        = Guid.NewGuid(),
+                    AdmissionId     = admission.AdmissionID,
+                    FeeType         = FeeDueType.Monthly,
+                    FeeMonth        = targetMonth,
+                    BaseAmount      = baseAmt,
+                    LateFeeAmount   = isLate ? NormalizeAmount(settings.LateFeeAmount) : 0m,
+                    DueDate         = dueDate,
+                    IsLateFeeWaived = false,
+                    Status          = status,
+                    CreatedAt       = DateTime.UtcNow
+                };
+            }
 
             await repository.AddFeeDuesAsync(new[] { due });
             await repository.SaveChangesAsync();
@@ -675,14 +700,14 @@ namespace InstituteWebAPI.Services.FeeManagement
                 throw new InvalidOperationException("Fee due not found.");
             }
 
-            if (due.FeeType != FeeDueType.Admission && due.FeeType != FeeDueType.Card)
+            // Any fee type (Monthly, Admission, Card) can be deleted as long as it
+            // hasn't actually been paid against — that's the only real safety concern.
+            // Monthly dues used to be blocked outright, which meant a mistakenly
+            // generated monthly fee (e.g. via the wrong "generate for month" path)
+            // could never be corrected. See GenerateMonthlyDueForMonthAsync's NR check.
+            if (due.Status == FeeDueStatus.Paid || due.Status == FeeDueStatus.Partial || due.PaymentDetails.Any())
             {
-                throw new InvalidOperationException("Only admission or card fees can be deleted.");
-            }
-
-            if (due.Status == FeeDueStatus.Paid || due.PaymentDetails.Any())
-            {
-                throw new InvalidOperationException("Cannot delete a fee that has been paid.");
+                throw new InvalidOperationException("Cannot delete a fee that has payments recorded.");
             }
 
             await repository.DeleteFeeDueAsync(due);
