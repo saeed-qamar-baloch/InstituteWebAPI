@@ -335,6 +335,29 @@ namespace InstituteWebAPI.Services.FeeManagement
                     continue;
                 }
 
+                // ── Admin-settled bypass ─────────────────────────────────────────────
+                // 1. Late fee waived + any payment received → treat as fully Paid.
+                //    Covers students who paid in good faith but slightly short of the
+                //    base, where the institute forgives the remaining balance.
+                if (due.IsLateFeeWaived && paid > 0m)
+                {
+                    if (due.Status != FeeDueStatus.Paid)
+                    {
+                        due.Status = FeeDueStatus.Paid;
+                        hasChanges = true;
+                    }
+                    continue; // not a remaining due — settled
+                }
+
+                // 2. Respect dues the admin has explicitly marked Waived (e.g. an
+                //    admission fee forgiven because the student is paying monthly).
+                //    Never override an externally-set Waived status.
+                if (due.Status == FeeDueStatus.Waived)
+                {
+                    continue; // settled — exclude from remaining dues
+                }
+                // ────────────────────────────────────────────────────────────────────
+
                 if (paid <= 0m)
                 {
                     if (due.Status != FeeDueStatus.Unpaid)
