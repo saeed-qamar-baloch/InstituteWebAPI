@@ -153,12 +153,15 @@ namespace InstituteWebAPI.Services.FeeManagement
             var today   = DateTime.UtcNow.Date;
 
             // Same one-time 25th-rule as BuildMonthlyDuesForAdmissionAsync: if this is
-            // being generated for the admission month itself and the effective due day
-            // is on/after the 25th, record it as NR instead of a real charge. Without
-            // this check, picking the admission month here (e.g. right after admitting
-            // a student late in the month) would wrongly bill the current month.
+            // being generated for the admission month itself and the student actually
+            // REGISTERED on/after the 25th, record it as NR instead of a real charge.
+            // This must key off the registration day, not the configured recurring
+            // DueDate (e.g. "due on the 5th of every month") — a student who joined on
+            // the 30th but has a recurring due day of 5 should still be NR for the
+            // admission month, since the due-day setting is about billing schedule,
+            // not about how late in the month they enrolled.
             FeeDue due;
-            if (targetMonth == admissionMonth && effectiveDueDay >= 25)
+            if (targetMonth == admissionMonth && admission.RegistrationDate.Day >= 25)
             {
                 due = new FeeDue
                 {
@@ -206,11 +209,13 @@ namespace InstituteWebAPI.Services.FeeManagement
         /// Shared by GenerateMonthlyDuesAsync (single student) and
         /// BulkGenerateMonthlyDuesAsync (all students) so the rules below never diverge.
         ///
-        /// 25th-rule (one-time, at admission only): if the student's effective due
-        /// day is on/after the 25th, the ADMISSION month's fee is recorded as "NR"
+        /// 25th-rule (one-time, at admission only): if the student REGISTERED on or
+        /// after the 25th of the month, the ADMISSION month's fee is recorded as "NR"
         /// (Not Registered, zero amount) instead of a normal charge — it never recurs
-        /// in later months. Every other month is generated normally as Unpaid, with
-        /// no label-shifting.
+        /// in later months. This is keyed off the registration day specifically, not
+        /// the configured recurring DueDate, so a custom "due on the 5th" setting
+        /// doesn't suppress NR for someone who joined on the 30th. Every other month
+        /// is generated normally as Unpaid, with no label-shifting.
         /// </summary>
         private async Task<List<FeeDue>> BuildMonthlyDuesForAdmissionAsync(
             Admissions admission,
@@ -242,9 +247,10 @@ namespace InstituteWebAPI.Services.FeeManagement
                 }
 
                 // One-time NR rule: only the admission month itself, and only when the
-                // effective due day is on/after the 25th. No real charge is created —
-                // the next month (handled by the next loop iteration) is billed normally.
-                if (current == admissionMonth && effectiveDueDay >= 25)
+                // student actually registered on/after the 25th (registration day, not
+                // the configured recurring due day). No real charge is created — the
+                // next month (handled by the next loop iteration) is billed normally.
+                if (current == admissionMonth && admission.RegistrationDate.Day >= 25)
                 {
                     created.Add(new FeeDue
                     {
