@@ -62,6 +62,7 @@ namespace InstituteWebAPI.Data
         public DbSet<Expense> Expenses { get; set; }
         public DbSet<CardRequest> CardRequests { get; set; }
         public DbSet<MaterialRequest> MaterialRequests { get; set; }
+        public DbSet<TeacherIssueReport> IssueReports { get; set; }
         public DbSet<TimetableEntry> TimetableEntries { get; set; }
         public DbSet<InstituteSetting> InstituteSettings { get; set; }
         public DbSet<AuditLog> AuditLogs { get; set; }
@@ -179,6 +180,25 @@ namespace InstituteWebAPI.Data
                 .HasOne(f => f.Admission)
                 .WithMany(a => a.FeeHistories)
                 .HasForeignKey(f => f.AdmissionID)
+                .OnDelete(DeleteBehavior.NoAction);
+
+            // TeacherIssueReport: three FKs, all NoAction to avoid cascade paths
+            modelBuilder.Entity<TeacherIssueReport>()
+                .HasOne(r => r.Teacher)
+                .WithMany()
+                .HasForeignKey(r => r.TeacherId)
+                .OnDelete(DeleteBehavior.NoAction);
+
+            modelBuilder.Entity<TeacherIssueReport>()
+                .HasOne(r => r.CurrentClass)
+                .WithMany()
+                .HasForeignKey(r => r.CurrentClassId)
+                .OnDelete(DeleteBehavior.NoAction);
+
+            modelBuilder.Entity<TeacherIssueReport>()
+                .HasOne(r => r.Student)
+                .WithMany()
+                .HasForeignKey(r => r.StudentId)
                 .OnDelete(DeleteBehavior.NoAction);
         }
     }

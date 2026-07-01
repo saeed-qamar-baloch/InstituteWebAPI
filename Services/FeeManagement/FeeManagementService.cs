@@ -1012,7 +1012,7 @@ namespace InstituteWebAPI.Services.FeeManagement
                     {
                         monthlyStatus[key] = due.Status.ToString(); // "Paid"/"Unpaid"/"Partial"/"Waived"
 
-                        if (due.Status != FeeDueStatus.Paid && due.Status != FeeDueStatus.Waived)
+                        if (due.Status != FeeDueStatus.Paid && due.Status != FeeDueStatus.Waived && due.Status != FeeDueStatus.NR)
                         {
                             var totalDue    = due.BaseAmount + (due.IsLateFeeWaived ? 0m : due.LateFeeAmount);
                             var paid        = due.PaymentDetails.Sum(p => p.PaidAmount);

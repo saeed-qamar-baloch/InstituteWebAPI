@@ -8,7 +8,8 @@ namespace InstituteWebApp.Models.Domain
         LeaveRequest = 1,
         CardRequest = 2,
         MarkEditRequest = 3,
-        MaterialRequest = 4
+        MaterialRequest = 4,
+        IssueReport     = 5,
     }
 
     /// <summary>
